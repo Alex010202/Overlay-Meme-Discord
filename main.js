@@ -7,9 +7,8 @@ const https = require('https')
 require('dotenv').config({ path: path.join(__dirname, 'token.env') })
 Menu.setApplicationMenu(null)
 
-// ─── Auto-updater (silencieux) ────────────────────────────────────────────────
-autoUpdater.autoDownload = true        // télécharge dès qu'une MAJ est dispo
-autoUpdater.autoInstallOnAppQuit = true // installe quand l'app se ferme
+autoUpdater.autoDownload = true
+autoUpdater.autoInstallOnAppQuit = true
 
 function sendUpdateStatus(status, extra = {}) {
   if (settingsWindow && !settingsWindow.isDestroyed()) {
@@ -39,11 +38,9 @@ autoUpdater.on('error', (err) => {
 
 autoUpdater.on('update-downloaded', () => {
   sendUpdateStatus('downloaded')
-  // Installe immédiatement et relance l'app
   autoUpdater.quitAndInstall(true, true)
 })
 
-// ─── Settings persistence ────────────────────────────────────────────────────
 const CONFIG_DIR = path.join(app.getPath('userData'), 'config')
 if (!fs.existsSync(CONFIG_DIR)) fs.mkdirSync(CONFIG_DIR, { recursive: true })
 
@@ -78,7 +75,6 @@ function saveSettings(patch) {
 
 let settings = loadSettings()
 
-// ─── Globals ─────────────────────────────────────────────────────────────────
 let overlayWindow
 let settingsWindow
 let tray
@@ -86,7 +82,6 @@ let discordClient
 let currentChannelId = settings.channelId
 let overlayNormalBounds = null
 
-// ─── Overlay Window ──────────────────────────────────────────────────────────
 function createOverlayWindow() {
   const bounds = settings.overlayBounds || { width: 360, height: 260, x: 20, y: 20 }
   overlayWindow = new BrowserWindow({
@@ -110,7 +105,6 @@ function createOverlayWindow() {
   overlayWindow.loadFile('overlay.html')
 }
 
-// ─── Settings Window ─────────────────────────────────────────────────────────
 function createSettingsWindow() {
   if (settingsWindow) { settingsWindow.focus(); return }
   settingsWindow = new BrowserWindow({
@@ -134,14 +128,11 @@ function createSettingsWindow() {
 
   settingsWindow.webContents.on('did-finish-load', () => {
     settingsWindow.webContents.send('load-settings', settings)
-    // Envoie les profils au chargement initial de la fenêtre
     settingsWindow.webContents.send('load-profiles', loadProfiles())
-    // Envoie la version actuelle de l'app
     settingsWindow.webContents.send('app-version', app.getVersion())
   })
 }
 
-// ─── Tray ────────────────────────────────────────────────────────────────────
 function createTray() {
   const icon = nativeImage.createFromDataURL('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAACXBIWXMAAAsTAAALEwEAmpwYAAABMklEQVR4nO2Wy0rDQBSGz6SJpF6wCy9QEHHhTlS8oAt8AB9A8AU09AHs0o0PoQtBF1asWFGsVCiIFy9QBBEUFRQUrSCKoCCKxYwcGJI0yUzSRRf+cJY5c75/5jwJkJCQkJCQkPgHdIDrNAGgBeANgAkAYQDXOecS8MiA0rBFwDUAjHPOGWOcMXbIOeecc84ZY845Z4wRxhhCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEkH/gC3pXME7cI5TAAAAAAElFTkSuQmCC')
   tray = new Tray(icon)
@@ -153,7 +144,6 @@ function createTray() {
   tray.on('click', () => createSettingsWindow())
 }
 
-// ─── Hotkey ──────────────────────────────────────────────────────────────────
 function registerSoundHotkey(accelerator) {
   globalShortcut.unregisterAll()
   if (!accelerator) return
@@ -184,7 +174,6 @@ function fetchTenorMp4(tenorPageUrl) {
 }
 
 
-// ─── Discord Bot ──────────────────────────────────────────────────────────────
 function startBot(channelId) {
   if (discordClient) discordClient.destroy()
   currentChannelId = channelId
@@ -211,6 +200,7 @@ function startBot(channelId) {
     let stickerUrl = null
     let attachmentUrl = null
     let gifIsVideo = false
+    let gifIsLooping = false
 
     const stickerMatch = content.match(/^\[.+?\]\((https:\/\/media\.discordapp\.net\/stickers\/[^\)]+)\)$/)
     if (stickerMatch) { stickerUrl = stickerMatch[1]; content = '' }
@@ -253,6 +243,7 @@ function startBot(channelId) {
           content: content.trim(),
           gifUrl: mp4Url,
           gifIsVideo: true,
+          gifIsLooping: true,
           avatar: message.author.displayAvatarURL({ size: 32 }),
           time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
         })
@@ -277,6 +268,7 @@ function startBot(channelId) {
       content: content.trim(),
       gifUrl: gifUrl || stickerUrl || attachmentUrl,
       gifIsVideo,
+      gifIsLooping,
       avatar: message.author.displayAvatarURL({ size: 32 }),
       time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
     })
@@ -288,7 +280,6 @@ function startBot(channelId) {
   })
 }
 
-// ─── IPC ─────────────────────────────────────────────────────────────────────
 ipcMain.on('set-channel', (e, channelId) => {
   settings = saveSettings({ channelId })
   currentChannelId = channelId
@@ -350,12 +341,10 @@ ipcMain.on('get-profiles', (e) => {
   e.reply('load-profiles', loadProfiles())
 })
 
-// save-profile supporte maintenant le flag overwrite
 ipcMain.on('save-profile', (e, { name, overwrite }) => {
   if (!name) return
   const profiles = loadProfiles()
 
-  // Profil existant sans confirmation d'écrasement → signaler au renderer
   if (profiles[name] && !overwrite) {
     if (settingsWindow) settingsWindow.webContents.send('profile-exists', name)
     return
@@ -436,7 +425,6 @@ ipcMain.on('load-profile', (e, { name }) => {
   registerSoundHotkey(settings.soundHotkey)
 })
 
-// ─── Profiles persistence ─────────────────────────────────────────────────
 const PROFILES_PATH = path.join(CONFIG_DIR, 'profiles.json')
 
 function loadProfiles() {
@@ -450,7 +438,6 @@ function saveProfiles(profiles) {
   fs.writeFileSync(PROFILES_PATH, JSON.stringify(profiles, null, 2))
 }
 
-// ─── App ─────────────────────────────────────────────────────────────────────
 app.whenReady().then(() => {
   createOverlayWindow()
   createTray()
@@ -458,10 +445,8 @@ app.whenReady().then(() => {
   startBot(currentChannelId)
   registerSoundHotkey(settings.soundHotkey)
 
-  // Vérifie les mises à jour en silence au démarrage
-  autoUpdater.checkForUpdates().catch(() => {}) // ignore les erreurs réseau
+  autoUpdater.checkForUpdates().catch(() => {})
 
-  // Polling hover dragbar pour border preview
   setInterval(() => {
   if (!overlayWindow || overlayWindow.isDestroyed()) return
   const cursor = screen.getCursorScreenPoint()

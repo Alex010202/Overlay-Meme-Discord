@@ -69,7 +69,6 @@
       min-height: 0;
     }
 
-    /* ── Media fullscreen mode ────────────────────────────────────────────── */
     body.media-mode #messages {
       padding: 0;
       gap: 0;
@@ -239,7 +238,6 @@
   const sizeHint = document.getElementById('size-hint')
   const borderPreview = document.getElementById('border-preview')
 
-  // ── Click-through ─────────────────────────────────────────────────────────
   function updateClickThrough() {
     const hasMessages = document.querySelectorAll('.msg').length > 0
     ipcRenderer.send('set-click-through', !hasMessages)
@@ -253,7 +251,6 @@
     sizeHint.style.opacity = '0'
   })
 
-  // ── Border preview via polling main process ───────────────────────────────
   ipcRenderer.on('dragbar-hover', (e, hovering) => {
     if (hovering) {
       borderPreview.classList.add('visible')
@@ -269,11 +266,9 @@
     sizeHint.style.opacity = '1'
   })
 
-  // ── Suppression animée ───────────────────────────────────────────────────
   function removeMsg(div) {
   if (div._removing) return
   div._removing = true
-  // Fige la hauteur mesurée pour que l'anim parte d'une valeur connue
   const h = div.getBoundingClientRect().height
   div.style.maxHeight = h + 'px'
   div.style.transition = [
@@ -292,7 +287,6 @@
   }, { once: true })
 }
 
-  // ── Messages ─────────────────────────────────────────────────────────────
   ipcRenderer.on('message', (e, msg) => {
     const container = document.getElementById('messages')
     const msgs = container.querySelectorAll('.msg')
@@ -307,10 +301,11 @@
     let mediaHtml = ''
     if (msg.gifUrl) {
       if (msg.gifIsVideo) {
-        const loopAttr = videoUntilEnd ? '' : 'loop'
-        const endedAttr = videoUntilEnd && msg.gifIsVideo
-  ? `onended="this.closest('.msg') && removeMsg(this.closest('.msg'))"`
-  : ''
+        const isLooping = !!msg.gifIsLooping
+        const loopAttr = (isLooping || !videoUntilEnd) ? 'loop' : ''
+        const endedAttr = (!isLooping && videoUntilEnd)
+          ? `onended="this.closest('.msg') && removeMsg(this.closest('.msg'))"`
+          : ''
         mediaHtml = `<video
           src="${msg.gifUrl}"
           autoplay ${loopAttr} playsinline
@@ -343,13 +338,12 @@
     let type = 'text'
     if (msg.gifUrl) type = msg.gifIsVideo ? 'video' : 'gif'
 
-    if (msg.gifIsVideo && videoUntilEnd) {
+    if (msg.gifIsVideo && videoUntilEnd && !msg.gifIsLooping) {
     } else {
       const duration = type === 'video' ? durationVideo
                       : type === 'gif'   ? durationGif
                       : durationText
 
-      // Quand le msg expire, on recheck si le suivant est un média ou du texte
       setTimeout(() => {
         removeMsg(div)
         requestAnimationFrame(() => {
@@ -361,7 +355,6 @@
     }
   })
 
-  // ── IPC Settings ──────────────────────────────────────────────────────────
   ipcRenderer.on('set-fontsize', (e, size) => {
     document.documentElement.style.setProperty('--font-size', size + 'px')
   })
