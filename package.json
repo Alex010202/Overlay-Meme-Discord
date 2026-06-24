@@ -1,0 +1,48 @@
+{
+  "name": "Meme-Discord",
+  "version": "1.0.0",
+  "description": "Discord message overlay",
+  "main": "main.js",
+  "author": "AlexUwU",
+  "license": "ISC",
+  "type": "commonjs",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win"
+  },
+  "dependencies": {
+    "discord.js": "^14.0.0",
+    "dotenv": "^16.0.0",
+    "electron-updater": "^6.1.7"
+  },
+  "devDependencies": {
+    "electron": "^25.9.8",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.toi.discord-overlay",
+    "productName": "Discord Overlay",
+    "files": [
+      "main.js",
+      "overlay.html",
+      "settings.html",
+      "token.env",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "Alex010202",
+      "repo":  "Overlay-Meme-Discord"
+    }
+  }
+}

@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: transparent;
+      font-family: 'Segoe UI', sans-serif;
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    #dragbar {
+      height: 20px;
+      background: rgba(15, 15, 25, var(--win-opacity, 0.7));
+      -webkit-app-region: drag;
+      border-radius: 8px 8px 0 0;
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      cursor: move;
+      transition: background 0.2s, height 0.2s;
+      position: relative;
+      user-select: none;
+      -webkit-user-select: none;
+      z-index: 10;
+    }
+
+    #dragbar:hover {
+      background: rgba(88, 101, 242, var(--win-opacity, 0.5));
+      height: 24px;
+    }
+
+    body.dragbar-hidden #dragbar {
+      height: 4px;
+      background: transparent;
+      overflow: hidden;
+    }
+
+    body.dragbar-hidden #dragbar:hover {
+      height: 4px;
+      background: transparent;
+    }
+
+    body.dragbar-hidden #dragbar span {
+      display: none;
+    }
+
+    #dragbar span {
+      font-size: 10px;
+      color: rgba(255,255,255,0.4);
+      pointer-events: none;
+    }
+
+    #messages {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 8px;
+      height: calc(100vh - 20px);
+      overflow: hidden;
+      justify-content: flex-start;
+    }
+
+    #messages .msg:last-child {
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* ── Media fullscreen mode ────────────────────────────────────────────── */
+    body.media-mode #messages {
+      padding: 0;
+      gap: 0;
+    }
+
+    body.media-mode .msg {
+      border-left: none;
+      border-radius: 0;
+      padding: 0;
+      flex: 1;
+      min-height: 0;
+    }
+
+    body.media-mode .msg-top {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 6px 10px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, transparent 100%);
+      margin-bottom: 0;
+      z-index: 2;
+      height: 32px;
+    }
+
+    body.media-mode .content {
+      flex: 1;
+      min-height: 0;
+      padding-top: 32px;
+    }
+
+    body.media-mode .msg {
+      position: relative;
+    }
+
+    body.media-mode .content img,
+    body.media-mode .content video {
+      width: 100%;
+      height: 100%;
+      max-height: none;
+      object-fit: contain;
+      border-radius: 0;
+      margin-top: 0;
+      display: block;
+    }
+
+    #border-preview {
+      position: fixed;
+      inset: 0;
+      border: 2px solid rgba(88, 101, 242, 0);
+      border-radius: 8px;
+      pointer-events: none;
+      transition: border-color 0.15s;
+      z-index: 9999;
+    }
+
+    #border-preview.visible {
+      border-color: rgba(88, 101, 242, 0.8);
+    }
+
+    .msg {
+      background: var(--msg-bg, rgba(15, 15, 25, 0.82));
+      border-left: 3px solid #5865F2;
+      border-radius: 6px;
+      padding: 8px 12px;
+      animation: slideIn 0.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      transition: none;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .msg.removing {
+  opacity: 0;
+  transform: translateY(-8px);
+  max-height: 0 !important;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s ease,
+    max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    padding 0.4s ease,
+    margin 0.4s ease;
+}
+
+    .msg-top {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 4px;
+    }
+
+    .avatar { width: 20px; height: 20px; border-radius: 50%; }
+
+    .author {
+      font-size: 12px;
+      font-weight: 600;
+      color: #5865F2;
+    }
+
+    .time {
+      font-size: 10px;
+      color: rgba(255,255,255,0.25);
+      margin-left: auto;
+    }
+
+    .content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      font-size: var(--font-size, 14px);
+      color: rgba(255,255,255,0.9);
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    .content img,
+    .content video {
+      flex: 1;
+      min-height: 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="border-preview"></div>
+  <div id="dragbar">
+    <span style="flex: 1;">⠿ Discord Overlay</span>
+    <span id="size-hint" style="
+      font-size: 10px;
+      color: rgba(255,255,255,0.5);
+      margin-left: 8px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      font-variant-numeric: tabular-nums;
+    "></span>
+  </div>
+  <div id="messages"></div>
+
+  <script>
+  const { ipcRenderer } = require('electron')
+  const MAX = 6
+
+  let soundEnabled = false
+  let videoVolume = 0
+  let durationText = 8000
+  let durationGif = 8000
+  let durationVideo = 10000
+  let videoUntilEnd = false
+
+  function esc(t) {
+    return String(t)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+  }
+
+  const dragbar = document.getElementById('dragbar')
+  const sizeHint = document.getElementById('size-hint')
+  const borderPreview = document.getElementById('border-preview')
+
+  // ── Click-through ─────────────────────────────────────────────────────────
+  function updateClickThrough() {
+    const hasMessages = document.querySelectorAll('.msg').length > 0
+    ipcRenderer.send('set-click-through', !hasMessages)
+  }
+
+  document.addEventListener('mousemove', updateClickThrough)
+
+  document.addEventListener('mouseleave', () => {
+    updateClickThrough()
+    borderPreview.classList.remove('visible')
+    sizeHint.style.opacity = '0'
+  })
+
+  // ── Border preview via polling main process ───────────────────────────────
+  ipcRenderer.on('dragbar-hover', (e, hovering) => {
+    if (hovering) {
+      borderPreview.classList.add('visible')
+      ipcRenderer.send('get-overlay-size')
+    } else {
+      borderPreview.classList.remove('visible')
+      sizeHint.style.opacity = '0'
+    }
+  })
+
+  ipcRenderer.on('overlay-size', (e, { width, height }) => {
+    sizeHint.textContent = `${width} × ${height}`
+    sizeHint.style.opacity = '1'
+  })
+
+  // ── Suppression animée ───────────────────────────────────────────────────
+  function removeMsg(div) {
+  if (div._removing) return
+  div._removing = true
+  // Fige la hauteur mesurée pour que l'anim parte d'une valeur connue
+  const h = div.getBoundingClientRect().height
+  div.style.maxHeight = h + 'px'
+  div.style.transition = [
+    'opacity 0.35s ease',
+    'transform 0.35s ease',
+    `max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1)`,
+    'padding 0.4s ease',
+    'margin 0.4s ease'
+  ].join(', ')
+  div.getBoundingClientRect()
+  div.classList.add('removing')
+  div.addEventListener('transitionend', (e) => {
+    if (e.propertyName !== 'max-height') return
+    div.remove()
+    updateClickThrough()
+  }, { once: true })
+}
+
+  // ── Messages ─────────────────────────────────────────────────────────────
+  ipcRenderer.on('message', (e, msg) => {
+    const container = document.getElementById('messages')
+    const msgs = container.querySelectorAll('.msg')
+    if (msgs.length >= MAX) removeMsg(msgs[0])
+
+    const isMedia = !!msg.gifUrl
+    document.body.classList.toggle('media-mode', isMedia)
+
+    const div = document.createElement('div')
+    div.className = 'msg'
+
+    let mediaHtml = ''
+    if (msg.gifUrl) {
+      if (msg.gifIsVideo) {
+        const loopAttr = videoUntilEnd ? '' : 'loop'
+        const endedAttr = videoUntilEnd && msg.gifIsVideo
+  ? `onended="this.closest('.msg') && removeMsg(this.closest('.msg'))"`
+  : ''
+        mediaHtml = `<video
+          src="${msg.gifUrl}"
+          autoplay ${loopAttr} playsinline
+          style="width:100%; height:100%; border-radius:0; margin-top:0; display:block; object-fit:contain;"
+          onloadedmetadata="this.muted=${!soundEnabled}; this.volume=${videoVolume};"
+          ${endedAttr}
+        ></video>`
+      } else {
+        mediaHtml = `<img
+          src="${msg.gifUrl}"
+          style="width:100%; height:100%; border-radius:0; margin-top:0; display:block; object-fit:contain;"
+        >`
+      }
+    }
+
+    div.innerHTML = `
+      <div class="msg-top">
+        <img class="avatar" src="${msg.avatar}" onerror="this.style.display='none'">
+        <span class="author">${esc(msg.author)}</span>
+        <span class="time">${msg.time}</span>
+      </div>
+      <div class="content">
+        ${msg.gifUrl ? mediaHtml : esc(msg.content || '')}
+      </div>
+    `
+
+    container.appendChild(div)
+    updateClickThrough()
+
+    let type = 'text'
+    if (msg.gifUrl) type = msg.gifIsVideo ? 'video' : 'gif'
+
+    if (msg.gifIsVideo && videoUntilEnd) {
+    } else {
+      const duration = type === 'video' ? durationVideo
+                      : type === 'gif'   ? durationGif
+                      : durationText
+
+      // Quand le msg expire, on recheck si le suivant est un média ou du texte
+      setTimeout(() => {
+        removeMsg(div)
+        requestAnimationFrame(() => {
+          const remaining = container.querySelectorAll('.msg')
+          const lastIsMedia = remaining.length > 0 && remaining[remaining.length - 1].querySelector('img, video')
+          document.body.classList.toggle('media-mode', !!lastIsMedia)
+        })
+      }, duration)
+    }
+  })
+
+  // ── IPC Settings ──────────────────────────────────────────────────────────
+  ipcRenderer.on('set-fontsize', (e, size) => {
+    document.documentElement.style.setProperty('--font-size', size + 'px')
+  })
+
+  ipcRenderer.on('set-volume', (e, enabled, vol) => {
+    soundEnabled = enabled
+    videoVolume = enabled ? vol : 0
+    document.querySelectorAll('video').forEach(v => {
+      v.muted = !enabled
+      v.volume = videoVolume
+    })
+  })
+
+  ipcRenderer.on('set-overlay-bg', (e, color) => {
+    document.documentElement.style.setProperty('--msg-bg', color)
+  })
+
+  ipcRenderer.on('set-window-opacity', (e, val) => {
+    document.documentElement.style.setProperty('--win-opacity', val)
+  })
+
+  ipcRenderer.on('set-durations', (e, d) => {
+    durationText   = d.durationText
+    durationGif    = d.durationGif
+    durationVideo  = d.durationVideo
+    videoUntilEnd  = d.videoUntilEnd
+  })
+
+  ipcRenderer.on('set-dragbar-hidden', (e, hidden) => {
+    document.body.classList.toggle('dragbar-hidden', !!hidden)
+  })
+
+  ipcRenderer.send('get-settings')
+  ipcRenderer.on('load-settings', (e, s) => {
+    if (s.fontSize)   document.documentElement.style.setProperty('--font-size', s.fontSize + 'px')
+    if (s.overlayBg)  document.documentElement.style.setProperty('--msg-bg', s.overlayBg)
+    if (s.opacity !== undefined) document.documentElement.style.setProperty('--win-opacity', s.opacity)
+    soundEnabled = s.soundEnabled || false
+    videoVolume  = soundEnabled ? (s.volume || 0.8) : 0
+    if (s.durationText !== undefined)  durationText  = s.durationText
+    if (s.durationGif !== undefined)   durationGif   = s.durationGif
+    if (s.durationVideo !== undefined) durationVideo = s.durationVideo
+    if (s.videoUntilEnd !== undefined) videoUntilEnd = s.videoUntilEnd
+    if (s.dragbarHidden !== undefined) document.body.classList.toggle('dragbar-hidden', !!s.dragbarHidden)
+  })
+  </script>
+</body>
+</html>

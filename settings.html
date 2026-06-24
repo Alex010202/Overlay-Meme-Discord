@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0f1012;
+      --sidebar: #151618;
+      --panel: #1a1b1e;
+      --card: #202226;
+      --border: #2a2b2f;
+      --accent: #5865F2;
+      --accent2: #4752c4;
+      --text: #e0e1e5;
+      --muted: #6b6f7a;
+      --green: #57f287;
+      --red: #ed4245;
+      --orange: #f0a000;
+    }
+
+    html, body { height: 100%; overflow: hidden; }
+    body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100%; }
+
+    .header { background: var(--sidebar); border-bottom: 1px solid var(--border); padding: 14px 14px 14px 20px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; -webkit-app-region: drag; user-select: none; -webkit-user-select: none; }
+    .header-right { display: flex; align-items: center; gap: 10px; -webkit-app-region: no-drag; }
+    .header-controls { display: flex; align-items: center; gap: 4px; }
+    .header-left { display: flex; align-items: center; gap: 10px; }
+    .logo-icon { width: 32px; height: 32px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .header-title { font-size: 15px; font-weight: 700; color: white; }
+    .header-sub   { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+    .status-pill { display: flex; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 5px 12px; font-size: 12px; color: var(--muted); }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); }
+    .dot.on { background: var(--green); }
+
+    .layout { display: flex; flex: 1; overflow: hidden; }
+    .sidebar { width: 130px; background: var(--sidebar); border-right: 1px solid var(--border); padding: 12px 8px; display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
+    .nav-item { padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer; transition: background 0.15s, color 0.15s; user-select: none; }
+    .nav-item:hover { background: var(--card); color: var(--text); }
+    .nav-item.active { background: var(--accent); color: white; }
+
+    .content { flex: 1; overflow-y: auto; padding: 20px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+    .content::-webkit-scrollbar { width: 4px; }
+    .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .tab { display: none; }
+    .tab.active { display: block; }
+
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+    .card-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 12px; }
+    .field-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; display: block; }
+    .hint { font-size: 11px; color: var(--muted); margin-top: 4px; opacity: 0.7; }
+    .input-row { display: flex; gap: 8px; }
+
+    input[type="text"] { flex: 1; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 9px 12px; color: var(--text); font-size: 13px; outline: none; transition: border 0.15s; }
+    input[type="text"]:focus { border-color: var(--accent); }
+
+    .btn { background: var(--accent); color: white; border: none; border-radius: 6px; padding: 9px 16px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s; white-space: nowrap; }
+    .btn:hover { background: var(--accent2); }
+    .btn.sm { padding: 6px 12px; font-size: 12px; }
+    .btn.danger { background: var(--red); }
+    .btn.danger:hover { background: #c0393b; }
+    .btn.warning { background: var(--orange); color: white; }
+    .btn.warning:hover { background: #cc8800; }
+    .btn.ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn.ghost:hover { background: var(--border); }
+
+    .slider-row { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+    input[type="range"] { flex: 1; accent-color: var(--accent); cursor: pointer; height: 4px; }
+    .slider-val { font-size: 12px; color: var(--accent); min-width: 38px; text-align: right; font-weight: 600; }
+
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 2px 0; }
+    .toggle-text { font-size: 13px; color: var(--text); }
+    .toggle-sub  { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .toggle { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-track { position: absolute; inset: 0; background: var(--border); border-radius: 22px; cursor: pointer; transition: background 0.2s; }
+    .toggle input:checked + .toggle-track { background: var(--accent); }
+    .toggle-track::after { content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%; background: white; top: 3px; left: 3px; transition: transform 0.2s; }
+    .toggle input:checked + .toggle-track::after { transform: translateX(18px); }
+
+    .collapsible { overflow: hidden; max-height: 0; opacity: 0; transition: max-height 0.25s ease, opacity 0.25s ease, margin-top 0.25s ease; margin-top: 0; }
+    .collapsible.open { max-height: 120px; opacity: 1; margin-top: 12px; }
+
+    .hotkey-box { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; font-size: 13px; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: border 0.15s; margin-top: 4px; }
+    .hotkey-box.recording { border-color: var(--accent); color: var(--accent); }
+    .hotkey-clear { font-size: 11px; color: var(--muted); cursor: pointer; padding: 2px 6px; border-radius: 4px; transition: background 0.15s; }
+    .hotkey-clear:hover { background: var(--border); color: var(--text); }
+
+    .color-row { display: flex; align-items: center; gap: 12px; }
+    input[type="color"] { width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; background: none; padding: 2px; flex-shrink: 0; }
+
+    .divider { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+
+    .saved { font-size: 11px; color: var(--green); min-height: 16px; opacity: 0; transition: opacity 0.2s; margin-top: 6px; }
+    .saved.show { opacity: 1; }
+
+    /* ── Liste des profils ── */
+    .profile-list { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+    .profile-item { display: flex; align-items: center; gap: 8px; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; }
+    .profile-name { flex: 1; font-size: 13px; color: var(--text); }
+    .profile-meta { font-size: 11px; color: var(--muted); }
+    .empty-profiles { font-size: 12px; color: var(--muted); text-align: center; padding: 20px 0; opacity: 0.6; }
+
+    .title-btn { width: 28px; height: 28px; border: none; border-radius: 6px; background: var(--card); color: var(--muted); cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; transition: background 0.15s, color 0.15s; }
+    .title-btn:hover { background: var(--border); color: var(--text); }
+    .title-btn.close:hover { background: var(--red); color: white; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="header-left">
+      <div class="logo-icon">💬</div>
+      <div>
+        <div class="header-title">Discord Overlay</div>
+        <div class="header-sub">Paramètres</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="status-pill">
+        <div class="dot" id="dot"></div>
+        <span id="status-text">Connexion…</span>
+      </div>
+      <div class="header-controls">
+        <button class="title-btn" onclick="minimizeWindow()" title="Réduire">─</button>
+        <button class="title-btn close" onclick="closeWindow()" title="Fermer">✕</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="sidebar">
+      <div class="nav-item active" onclick="showTab('general', this)">Général</div>
+      <div class="nav-item" onclick="showTab('affichage', this)">Affichage</div>
+      <div class="nav-item" onclick="showTab('son', this)">Son</div>
+      <div class="nav-item" onclick="showTab('messages', this)">Messages</div>
+      <div class="nav-item" onclick="showTab('profils', this)">Profils</div>
+    </div>
+
+    <div class="content">
+
+      <!-- TAB: Général -->
+      <div class="tab active" id="tab-general">
+        <div class="card">
+          <div class="card-title">Salon Discord</div>
+          <span class="field-label">ID du salon</span>
+          <div class="input-row">
+            <input type="text" id="channel-id" placeholder="ex: 123456789012345678">
+            <button class="btn" onclick="applyChannel()">Appliquer</button>
+          </div>
+          <p class="hint">Clic droit sur le salon → Copier l'identifiant</p>
+          <div class="saved" id="saved-msg">✓ Salon mis à jour !</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Overlay</div>
+          <span class="field-label">Opacité de la fenêtre</span>
+          <div class="slider-row">
+            <input type="range" id="opacity" min="0.2" max="1" step="0.05" value="0.9" oninput="updateOpacity(this.value)">
+            <span class="slider-val" id="opacity-val">90%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: Affichage -->
+      <div class="tab" id="tab-affichage">
+        <div class="card">
+          <div class="card-title">Texte</div>
+          <span class="field-label">Taille des messages</span>
+          <div class="slider-row">
+            <input type="range" id="fontsize" min="10" max="22" step="1" value="14" oninput="updateFont(this.value)">
+            <span class="slider-val" id="font-val">14px</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Dragbar</div>
+          <div class="toggle-row">
+            <div>
+              <div class="toggle-text">Masquer la dragbar</div>
+              <div class="toggle-sub">Cache la barre de déplacement de l'overlay</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="dragbar-lock" onchange="toggleDragbar(this.checked)">
+              <div class="toggle-track"></div>
+            </label>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Fond des messages</div>
+          <span class="field-label">Couleur</span>
+          <div class="color-row">
+            <input type="color" id="bg-color" value="#0f0f19" onchange="updateBg()">
+            <div style="flex:1">
+              <span class="field-label">Opacité</span>
+              <div class="slider-row">
+                <input type="range" id="bg-opacity" min="0" max="1" step="0.05" value="0.82" oninput="updateBg()">
+                <span class="slider-val" id="bg-opacity-val">82%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: Son -->
+      <div class="tab" id="tab-son">
+        <div class="card">
+          <div class="card-title">Son des vidéos</div>
+          <div class="toggle-row">
+            <div>
+              <div class="toggle-text">Activer le son</div>
+              <div class="toggle-sub">Joue le son des vidéos uploadées</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="sound-toggle" onchange="toggleSound(this.checked)">
+              <div class="toggle-track"></div>
+            </label>
+          </div>
+          <div class="collapsible" id="volume-container">
+            <hr class="divider">
+            <span class="field-label">Volume</span>
+            <div class="slider-row">
+              <input type="range" id="volume" min="0" max="1" step="0.05" value="0.8" oninput="updateVolume(this.value)">
+              <span class="slider-val" id="volume-val">80%</span>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Raccourci clavier</div>
+          <span class="field-label">Toggle son (global)</span>
+          <div id="hotkey-box" class="hotkey-box" onclick="startRecording()">
+            <span id="hotkey-display">Cliquer pour définir…</span>
+            <span class="hotkey-clear" onclick="clearHotkey(event)">✕</span>
+          </div>
+          <p class="hint">Appuie la combo puis relâche. Ex : Ctrl+Shift+S</p>
+        </div>
+      </div>
+
+      <!-- TAB: Messages -->
+      <div class="tab" id="tab-messages">
+        <div class="card">
+          <div class="card-title">Durée d'affichage</div>
+          <span class="field-label">Message texte</span>
+          <div class="slider-row">
+            <input type="range" id="duration-text" min="2" max="30" step="1" value="8" oninput="updateDurations()">
+            <span class="slider-val" id="duration-text-val">8s</span>
+          </div>
+          <hr class="divider">
+          <span class="field-label">GIF / Image</span>
+          <div class="slider-row">
+            <input type="range" id="duration-gif" min="2" max="30" step="1" value="8" oninput="updateDurations()">
+            <span class="slider-val" id="duration-gif-val">8s</span>
+          </div>
+          <hr class="divider">
+          <div class="toggle-row">
+            <div>
+              <div class="toggle-text">Vidéo : jusqu'à la fin</div>
+              <div class="toggle-sub">Disparaît quand la vidéo se termine</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="video-until-end" onchange="updateDurations()">
+              <div class="toggle-track"></div>
+            </label>
+          </div>
+          <div id="duration-video-row" style="margin-top: 10px;">
+            <span class="field-label">Durée vidéo</span>
+            <div class="slider-row">
+              <input type="range" id="duration-video" min="2" max="60" step="1" value="10" oninput="updateDurations()">
+              <span class="slider-val" id="duration-video-val">10s</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: Profils -->
+      <div class="tab" id="tab-profils">
+        <div class="card">
+          <div class="card-title">Sauvegarder le profil actuel</div>
+          <span class="field-label">Nom du profil</span>
+          <div class="input-row">
+            <input type="text" id="profile-name" placeholder="ex: Gaming, Stream…">
+            <button class="btn" onclick="saveProfile()">Sauvegarder</button>
+          </div>
+          <p class="hint">Sauvegarde : position, taille, opacité, fond, taille du texte</p>
+
+          <div class="saved" id="profile-saved">✓ Profil sauvegardé !</div>
+        </div>
+
+        <div class="card">
+          <div class="card-title" style="display:flex; align-items:center; justify-content:space-between;">
+            Profils sauvegardés
+            <button class="btn sm ghost" onclick="openProfilesFolder()">📁 Ouvrir le dossier</button>
+          </div>
+          <div class="profile-list" id="profile-list">
+            <div class="empty-profiles">Aucun profil sauvegardé</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const { ipcRenderer } = require('electron')
+
+    // ── Fenêtre ───────────────────────────────────────────────────────────────
+    function minimizeWindow() { ipcRenderer.send('win-minimize') }
+    function closeWindow()    { ipcRenderer.send('win-close') }
+
+    function showTab(name, el) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'))
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'))
+      document.getElementById('tab-' + name).classList.add('active')
+      el.classList.add('active')
+    }
+
+    function flashSaved(id) {
+      const el = document.getElementById(id)
+      el.classList.add('show')
+      setTimeout(() => el.classList.remove('show'), 2000)
+    }
+
+    // ── Settings ──────────────────────────────────────────────────────────────
+    ipcRenderer.on('load-settings', (e, s) => {
+      if (s.channelId) document.getElementById('channel-id').value = s.channelId
+      if (s.opacity !== undefined) {
+        document.getElementById('opacity').value = s.opacity
+        document.getElementById('opacity-val').textContent = Math.round(s.opacity * 100) + '%'
+      }
+      if (s.fontSize) {
+        document.getElementById('fontsize').value = s.fontSize
+        document.getElementById('font-val').textContent = s.fontSize + 'px'
+      }
+      document.getElementById('sound-toggle').checked = !!s.soundEnabled
+      document.getElementById('volume-container').classList.toggle('open', !!s.soundEnabled)
+      if (s.volume !== undefined) {
+        document.getElementById('volume').value = s.volume
+        document.getElementById('volume-val').textContent = Math.round(s.volume * 100) + '%'
+      }
+      if (s.soundHotkey) setHotkeyDisplay(s.soundHotkey)
+      if (s.overlayBg) {
+        const m = s.overlayBg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?/)
+        if (m) {
+          const hex = '#' + [m[1],m[2],m[3]].map(x => parseInt(x).toString(16).padStart(2,'0')).join('')
+          document.getElementById('bg-color').value = hex
+          const op = m[4] !== undefined ? parseFloat(m[4]) : 1
+          document.getElementById('bg-opacity').value = op
+          document.getElementById('bg-opacity-val').textContent = Math.round(op * 100) + '%'
+        }
+      }
+      if (s.durationText !== undefined) { const v = s.durationText/1000; document.getElementById('duration-text').value = v; document.getElementById('duration-text-val').textContent = v+'s' }
+      if (s.durationGif  !== undefined) { const v = s.durationGif/1000;  document.getElementById('duration-gif').value  = v; document.getElementById('duration-gif-val').textContent  = v+'s' }
+      if (s.durationVideo!== undefined) { const v = s.durationVideo/1000;document.getElementById('duration-video').value= v; document.getElementById('duration-video-val').textContent= v+'s' }
+      if (s.videoUntilEnd!== undefined) {
+        document.getElementById('video-until-end').checked = s.videoUntilEnd
+        document.getElementById('duration-video-row').style.display = s.videoUntilEnd ? 'none' : ''
+      }
+      if (s.dragbarHidden !== undefined) {
+        document.getElementById('dragbar-lock').checked = !!s.dragbarHidden
+      }
+    })
+
+    ipcRenderer.on('status', (e, data) => {
+      document.getElementById('dot').className = 'dot' + (data.ok ? ' on' : '')
+      document.getElementById('status-text').textContent = data.ok ? data.tag : 'Erreur'
+    })
+
+    ipcRenderer.on('sound-toggled', (e, enabled) => {
+      document.getElementById('sound-toggle').checked = enabled
+      document.getElementById('volume-container').classList.toggle('open', enabled)
+    })
+
+    // ── Profils ───────────────────────────────────────────────────────────────
+    function renderProfiles(profiles) {
+      const list = document.getElementById('profile-list')
+      const names = Object.keys(profiles)
+      if (names.length === 0) {
+        list.innerHTML = '<div class="empty-profiles">Aucun profil sauvegardé</div>'
+        return
+      }
+      list.innerHTML = names.map(name => {
+        const p = profiles[name]
+        const b = p.overlayBounds
+        const safe = name.replace(/\\/g,'\\\\').replace(/'/g,"\\'")
+        return `<div class="profile-item">
+          <div>
+            <div class="profile-name">${name}</div>
+            <div class="profile-meta">${b.width}×${b.height} — opacité ${Math.round(p.opacity*100)}% — ${p.fontSize}px</div>
+          </div>
+          <button class="btn sm ghost"   onclick="loadProfile('${safe}')">Charger</button>
+          <button class="btn sm warning" onclick="overwriteProfile('${safe}')">Écraser</button>
+          <button class="btn sm danger"  onclick="deleteProfile('${safe}')">✕</button>
+        </div>`
+      }).join('')
+    }
+
+    // ── Logique save / overwrite ──────────────────────────────────────────────
+    let _pendingSaveName = null
+
+    // Unique listener load-profiles : rendu + flash post-save
+    ipcRenderer.on('load-profiles', (e, profiles) => {
+      if (_pendingSaveName !== null) {
+        document.getElementById('profile-name').value = ''
+        flashSaved('profile-saved')
+        _pendingSaveName = null
+      }
+      renderProfiles(profiles)
+    })
+
+    function saveProfile() {
+      const name = document.getElementById('profile-name').value.trim()
+      if (!name) return
+      _pendingSaveName = name
+      ipcRenderer.send('save-profile', { name, overwrite: false })
+    }
+
+    function overwriteProfile(name) {
+      _pendingSaveName = name
+      ipcRenderer.send('save-profile', { name, overwrite: true })
+    }
+
+    function loadProfile(name)   { ipcRenderer.send('load-profile',   { name }) }
+    function deleteProfile(name) { ipcRenderer.send('delete-profile', { name }) }
+    function openProfilesFolder(){ ipcRenderer.send('open-profiles-folder') }
+
+    document.getElementById('profile-name').addEventListener('keydown', e => { if (e.key === 'Enter') saveProfile() })
+
+    // ── Général ───────────────────────────────────────────────────────────────
+    function applyChannel() {
+      const id = document.getElementById('channel-id').value.trim()
+      if (!id) return
+      ipcRenderer.send('set-channel', id)
+      flashSaved('saved-msg')
+    }
+    document.getElementById('channel-id').addEventListener('keydown', e => { if (e.key === 'Enter') applyChannel() })
+
+    function updateOpacity(val) {
+      document.getElementById('opacity-val').textContent = Math.round(val * 100) + '%'
+      ipcRenderer.send('set-opacity', parseFloat(val))
+    }
+    function updateFont(val) {
+      document.getElementById('font-val').textContent = val + 'px'
+      ipcRenderer.send('set-fontsize', parseInt(val))
+    }
+    function updateBg() {
+      const hex = document.getElementById('bg-color').value
+      const op  = parseFloat(document.getElementById('bg-opacity').value)
+      document.getElementById('bg-opacity-val').textContent = Math.round(op * 100) + '%'
+      const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16)
+      ipcRenderer.send('set-overlay-bg', `rgba(${r},${g},${b},${op})`)
+    }
+    function toggleDragbar(hidden) {
+      ipcRenderer.send('set-dragbar-hidden', hidden)
+    }
+
+    // ── Son ───────────────────────────────────────────────────────────────────
+    function toggleSound(enabled) {
+      document.getElementById('volume-container').classList.toggle('open', enabled)
+      const vol = enabled ? parseFloat(document.getElementById('volume').value) : 0
+      ipcRenderer.send('set-volume', enabled, vol)
+    }
+    function updateVolume(val) {
+      document.getElementById('volume-val').textContent = Math.round(val * 100) + '%'
+      ipcRenderer.send('set-volume', document.getElementById('sound-toggle').checked, parseFloat(val))
+    }
+
+    // ── Durées ────────────────────────────────────────────────────────────────
+    function updateDurations() {
+      const text     = parseFloat(document.getElementById('duration-text').value)
+      const gif      = parseFloat(document.getElementById('duration-gif').value)
+      const video    = parseFloat(document.getElementById('duration-video').value)
+      const untilEnd = document.getElementById('video-until-end').checked
+      document.getElementById('duration-text-val').textContent  = text  + 's'
+      document.getElementById('duration-gif-val').textContent   = gif   + 's'
+      document.getElementById('duration-video-val').textContent = video + 's'
+      document.getElementById('duration-video-row').style.display = untilEnd ? 'none' : ''
+      ipcRenderer.send('set-durations', { durationText: text*1000, durationGif: gif*1000, durationVideo: video*1000, videoUntilEnd: untilEnd })
+    }
+
+    // ── Hotkey ────────────────────────────────────────────────────────────────
+    let recording = false
+    function setHotkeyDisplay(acc) { document.getElementById('hotkey-display').textContent = acc || 'Cliquer pour définir…' }
+    function startRecording() {
+      if (recording) return
+      recording = true
+      document.getElementById('hotkey-box').classList.add('recording')
+      document.getElementById('hotkey-display').textContent = 'En attente…'
+    }
+    document.addEventListener('keydown', e => {
+      if (!recording) return
+      e.preventDefault()
+      const mods = [], ignore = ['Control','Shift','Alt','Meta']
+      if (e.ctrlKey) mods.push('Ctrl'); if (e.shiftKey) mods.push('Shift'); if (e.altKey) mods.push('Alt')
+      if (!ignore.includes(e.key)) {
+        const key = e.key === ' ' ? 'Space' : e.key.length === 1 ? e.key.toUpperCase() : e.key
+        document.getElementById('hotkey-display').textContent = [...mods, key].join('+')
+      }
+    })
+    document.addEventListener('keyup', e => {
+      if (!recording) return
+      const mods = [], ignore = ['Control','Shift','Alt','Meta']
+      if (e.ctrlKey) mods.push('Ctrl'); if (e.shiftKey) mods.push('Shift'); if (e.altKey) mods.push('Alt')
+      if (!ignore.includes(e.key)) {
+        const key = e.key === ' ' ? 'Space' : e.key.length === 1 ? e.key.toUpperCase() : e.key
+        const acc = [...mods, key].join('+')
+        recording = false
+        document.getElementById('hotkey-box').classList.remove('recording')
+        setHotkeyDisplay(acc)
+        ipcRenderer.send('set-hotkey', acc)
+      }
+    })
+    function clearHotkey(event) {
+      event.stopPropagation()
+      recording = false
+      document.getElementById('hotkey-box').classList.remove('recording')
+      setHotkeyDisplay('')
+      ipcRenderer.send('set-hotkey', '')
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    ipcRenderer.send('get-settings')
+    ipcRenderer.send('get-profiles')
+  </script>
+</body>
+</html>
