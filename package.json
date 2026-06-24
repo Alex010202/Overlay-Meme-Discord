@@ -13,7 +13,7 @@
   "dependencies": {
     "discord.js": "^14.0.0",
     "dotenv": "^16.0.0",
-    "electron-updater": "^6.1.7"
+    "electron-updater": "^6.8.9"
   },
   "devDependencies": {
     "electron": "^25.9.8",
@@ -42,7 +42,7 @@
     "publish": {
       "provider": "github",
       "owner": "Alex010202",
-      "repo":  "Overlay-Meme-Discord"
+      "repo": "Overlay-Meme-Discord"
     }
   }
 }
