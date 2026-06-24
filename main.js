@@ -11,7 +11,34 @@ Menu.setApplicationMenu(null)
 autoUpdater.autoDownload = true        // télécharge dès qu'une MAJ est dispo
 autoUpdater.autoInstallOnAppQuit = true // installe quand l'app se ferme
 
+function sendUpdateStatus(status, extra = {}) {
+  if (settingsWindow && !settingsWindow.isDestroyed()) {
+    settingsWindow.webContents.send('update-status', { status, ...extra })
+  }
+}
+
+autoUpdater.on('checking-for-update', () => {
+  sendUpdateStatus('checking')
+})
+
+autoUpdater.on('update-available', (info) => {
+  sendUpdateStatus('available', { version: info.version })
+})
+
+autoUpdater.on('update-not-available', () => {
+  sendUpdateStatus('up-to-date')
+})
+
+autoUpdater.on('download-progress', (progress) => {
+  sendUpdateStatus('downloading', { percent: Math.round(progress.percent) })
+})
+
+autoUpdater.on('error', (err) => {
+  sendUpdateStatus('error', { message: err?.message || 'Erreur inconnue' })
+})
+
 autoUpdater.on('update-downloaded', () => {
+  sendUpdateStatus('downloaded')
   // Installe immédiatement et relance l'app
   autoUpdater.quitAndInstall(true, true)
 })
@@ -109,6 +136,8 @@ function createSettingsWindow() {
     settingsWindow.webContents.send('load-settings', settings)
     // Envoie les profils au chargement initial de la fenêtre
     settingsWindow.webContents.send('load-profiles', loadProfiles())
+    // Envoie la version actuelle de l'app
+    settingsWindow.webContents.send('app-version', app.getVersion())
   })
 }
 
@@ -350,6 +379,14 @@ ipcMain.on('delete-profile', (e, { name }) => {
   delete profiles[name]
   saveProfiles(profiles)
   if (settingsWindow) settingsWindow.webContents.send('load-profiles', profiles)
+})
+
+ipcMain.on('check-for-updates', () => {
+  autoUpdater.checkForUpdates().catch((err) => {
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
+      settingsWindow.webContents.send('update-status', { status: 'error', message: err?.message || 'Erreur réseau' })
+    }
+  })
 })
 
 ipcMain.on('get-overlay-size', (e) => {

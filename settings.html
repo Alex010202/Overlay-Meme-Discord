@@ -107,6 +107,42 @@
     .title-btn { width: 28px; height: 28px; border: none; border-radius: 6px; background: var(--card); color: var(--muted); cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; transition: background 0.15s, color 0.15s; }
     .title-btn:hover { background: var(--border); color: var(--text); }
     .title-btn.close:hover { background: var(--red); color: white; }
+
+    /* ── Badge de version ── */
+    #version-badge {
+      position: fixed;
+      bottom: 10px;
+      right: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--muted);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 10px;
+      z-index: 50;
+      cursor: pointer;
+      user-select: none;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    #version-badge:hover { border-color: var(--accent); color: var(--text); }
+    #version-badge .vb-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+      flex-shrink: 0;
+    }
+    #version-badge.up-to-date .vb-dot { background: var(--green); }
+    #version-badge.available .vb-dot,
+    #version-badge.downloading .vb-dot { background: var(--orange); }
+    #version-badge.error .vb-dot { background: var(--red); }
+    #version-badge.checking .vb-dot {
+      animation: vb-pulse 1s ease-in-out infinite;
+    }
+    @keyframes vb-pulse { 0%,100% { opacity: 0.3; } 50% { opacity: 1; } }
   </style>
 </head>
 <body>
@@ -299,6 +335,11 @@
       </div>
 
     </div>
+  </div>
+
+  <div id="version-badge" onclick="checkForUpdates()" title="Cliquer pour vérifier les mises à jour">
+    <span class="vb-dot"></span>
+    <span id="version-text">v…</span>
   </div>
 
   <script>
@@ -521,6 +562,49 @@
     // ── Init ──────────────────────────────────────────────────────────────────
     ipcRenderer.send('get-settings')
     ipcRenderer.send('get-profiles')
+
+    // ── Badge de version ─────────────────────────────────────────────────────
+    let currentAppVersion = ''
+
+    function setBadge(statusClass, text) {
+      const badge = document.getElementById('version-badge')
+      badge.className = statusClass
+      document.getElementById('version-text').textContent = text
+    }
+
+    ipcRenderer.on('app-version', (e, version) => {
+      currentAppVersion = version
+      setBadge('', `v${version}`)
+    })
+
+    ipcRenderer.on('update-status', (e, data) => {
+      const v = currentAppVersion ? `v${currentAppVersion}` : ''
+      switch (data.status) {
+        case 'checking':
+          setBadge('checking', `${v} — vérification…`)
+          break
+        case 'available':
+          setBadge('available', `${v} — MAJ ${data.version} dispo`)
+          break
+        case 'downloading':
+          setBadge('downloading', `${v} — téléchargement ${data.percent}%`)
+          break
+        case 'downloaded':
+          setBadge('available', `${v} — redémarrage…`)
+          break
+        case 'up-to-date':
+          setBadge('up-to-date', `${v} — à jour`)
+          break
+        case 'error':
+          setBadge('error', `${v} — erreur MAJ`)
+          break
+      }
+    })
+
+    function checkForUpdates() {
+      setBadge('checking', `${currentAppVersion ? 'v'+currentAppVersion : ''} — vérification…`)
+      ipcRenderer.send('check-for-updates')
+    }
   </script>
 </body>
 </html>
