@@ -42,7 +42,8 @@
     "publish": {
       "provider": "github",
       "owner": "Alex010202",
-      "repo": "Overlay-Meme-Discord"
+      "repo": "Overlay-Meme-Discord",
+      "releaseType": "release"
     }
   }
 }
