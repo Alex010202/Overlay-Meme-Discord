@@ -97,7 +97,6 @@
     .saved { font-size: 11px; color: var(--green); min-height: 16px; opacity: 0; transition: opacity 0.2s; margin-top: 6px; }
     .saved.show { opacity: 1; }
 
-    /* ── Liste des profils ── */
     .profile-list { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
     .profile-item { display: flex; align-items: center; gap: 8px; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; }
     .profile-name { flex: 1; font-size: 13px; color: var(--text); }
@@ -108,7 +107,6 @@
     .title-btn:hover { background: var(--border); color: var(--text); }
     .title-btn.close:hover { background: var(--red); color: white; }
 
-    /* ── Badge de version ── */
     #version-badge {
       position: fixed;
       bottom: 10px;
@@ -178,7 +176,6 @@
 
     <div class="content">
 
-      <!-- TAB: Général -->
       <div class="tab active" id="tab-general">
         <div class="card">
           <div class="card-title">Salon Discord</div>
@@ -200,7 +197,6 @@
         </div>
       </div>
 
-      <!-- TAB: Affichage -->
       <div class="tab" id="tab-affichage">
         <div class="card">
           <div class="card-title">Texte</div>
@@ -239,7 +235,6 @@
         </div>
       </div>
 
-      <!-- TAB: Son -->
       <div class="tab" id="tab-son">
         <div class="card">
           <div class="card-title">Son des vidéos</div>
@@ -273,7 +268,6 @@
         </div>
       </div>
 
-      <!-- TAB: Messages -->
       <div class="tab" id="tab-messages">
         <div class="card">
           <div class="card-title">Durée d'affichage</div>
@@ -309,7 +303,6 @@
         </div>
       </div>
 
-      <!-- TAB: Profils -->
       <div class="tab" id="tab-profils">
         <div class="card">
           <div class="card-title">Sauvegarder le profil actuel</div>
@@ -345,7 +338,6 @@
   <script>
     const { ipcRenderer } = require('electron')
 
-    // ── Fenêtre ───────────────────────────────────────────────────────────────
     function minimizeWindow() { ipcRenderer.send('win-minimize') }
     function closeWindow()    { ipcRenderer.send('win-close') }
 
@@ -362,7 +354,6 @@
       setTimeout(() => el.classList.remove('show'), 2000)
     }
 
-    // ── Settings ──────────────────────────────────────────────────────────────
     ipcRenderer.on('load-settings', (e, s) => {
       if (s.channelId) document.getElementById('channel-id').value = s.channelId
       if (s.opacity !== undefined) {
@@ -412,7 +403,6 @@
       document.getElementById('volume-container').classList.toggle('open', enabled)
     })
 
-    // ── Profils ───────────────────────────────────────────────────────────────
     function renderProfiles(profiles) {
       const list = document.getElementById('profile-list')
       const names = Object.keys(profiles)
@@ -436,10 +426,8 @@
       }).join('')
     }
 
-    // ── Logique save / overwrite ──────────────────────────────────────────────
     let _pendingSaveName = null
 
-    // Unique listener load-profiles : rendu + flash post-save
     ipcRenderer.on('load-profiles', (e, profiles) => {
       if (_pendingSaveName !== null) {
         document.getElementById('profile-name').value = ''
@@ -467,7 +455,6 @@
 
     document.getElementById('profile-name').addEventListener('keydown', e => { if (e.key === 'Enter') saveProfile() })
 
-    // ── Général ───────────────────────────────────────────────────────────────
     function applyChannel() {
       const id = document.getElementById('channel-id').value.trim()
       if (!id) return
@@ -495,7 +482,6 @@
       ipcRenderer.send('set-dragbar-hidden', hidden)
     }
 
-    // ── Son ───────────────────────────────────────────────────────────────────
     function toggleSound(enabled) {
       document.getElementById('volume-container').classList.toggle('open', enabled)
       const vol = enabled ? parseFloat(document.getElementById('volume').value) : 0
@@ -506,7 +492,6 @@
       ipcRenderer.send('set-volume', document.getElementById('sound-toggle').checked, parseFloat(val))
     }
 
-    // ── Durées ────────────────────────────────────────────────────────────────
     function updateDurations() {
       const text     = parseFloat(document.getElementById('duration-text').value)
       const gif      = parseFloat(document.getElementById('duration-gif').value)
@@ -519,7 +504,6 @@
       ipcRenderer.send('set-durations', { durationText: text*1000, durationGif: gif*1000, durationVideo: video*1000, videoUntilEnd: untilEnd })
     }
 
-    // ── Hotkey ────────────────────────────────────────────────────────────────
     let recording = false
     function setHotkeyDisplay(acc) { document.getElementById('hotkey-display').textContent = acc || 'Cliquer pour définir…' }
     function startRecording() {
@@ -559,11 +543,9 @@
       ipcRenderer.send('set-hotkey', '')
     }
 
-    // ── Init ──────────────────────────────────────────────────────────────────
     ipcRenderer.send('get-settings')
     ipcRenderer.send('get-profiles')
 
-    // ── Badge de version ─────────────────────────────────────────────────────
     let currentAppVersion = ''
 
     function setBadge(statusClass, text) {
