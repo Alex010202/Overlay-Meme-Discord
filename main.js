@@ -101,10 +101,10 @@ let overlayNormalBounds = null
 
 function findYtDlp() {
   const possiblePaths = [
+    path.join(path.dirname(process.execPath), 'yt-dlp.exe'),
     path.join(process.resourcesPath, 'yt-dlp.exe'),
     path.join(__dirname, 'yt-dlp.exe'),
     path.join(__dirname, '..', 'yt-dlp.exe'),
-    path.join(process.execPath, '..', '..', 'yt-dlp.exe'), 
     'yt-dlp'
   ]
 
@@ -112,7 +112,6 @@ function findYtDlp() {
     if (fs.existsSync(p)) return p
   }
 
-  console.warn('yt-dlp.exe introuvable, fallback sur la commande globale')
   return 'yt-dlp'
 }
 
@@ -180,29 +179,41 @@ function cleanTiktokTmp() {
       const fp = path.join(TIKTOK_TMP_DIR, f)
       try {
         const stat = fs.statSync(fp)
-        if (now - stat.mtimeMs > 10 * 60 * 1000) fs.unlinkSync(fp)
+        if (now - stat.mtimeMs > 60 * 60 * 1000) fs.unlinkSync(fp)
       } catch {}
     }
   } catch {}
 }
 cleanTiktokTmp()
 
+const crypto = require('crypto')
+
+function tiktokCachePath(url) {
+  const hash = crypto.createHash('md5').update(url).digest('hex').slice(0, 12)
+  return path.join(TIKTOK_TMP_DIR, `tt_${hash}.mp4`)
+}
+
 function fetchYtDlpTikTokFile(url) {
   return new Promise((resolve) => {
+    const cachedPath = tiktokCachePath(url)
+    if (fs.existsSync(cachedPath)) {
+      fs.utimesSync(cachedPath, new Date(), new Date())
+      resolve(cachedPath)
+      return
+    }
     const bin = findYtDlp()
     const timeout = (settings.ytTimeout || 30000) + 30000
-    const outPath = path.join(TIKTOK_TMP_DIR, `tt_${Date.now()}.mp4`)
     const args = [
       '-f', 'bestvideo+bestaudio/best',
       '--merge-output-format', 'mp4',
       '--impersonate', 'chrome',
       '--no-playlist',
-      '-o', outPath,
+      '-o', cachedPath,
       url
     ]
     execFile(bin, args, { timeout }, (err) => {
-      if (err || !fs.existsSync(outPath)) { resolve(null); return }
-      resolve(outPath)
+      if (err || !fs.existsSync(cachedPath)) { resolve(null); return }
+      resolve(cachedPath)
     })
   })
 }
@@ -333,6 +344,15 @@ function createOverlayWindow() {
       callback({ requestHeaders: headers })
     }
   )
+
+  ses.webRequest.onBeforeRequest(
+  { urls: [
+    '*://*.doubleclick.net/*',
+    '*://*.googlesyndication.com/*',
+    '*://*.googleadservices.com/*',
+  ]},
+  (details, callback) => callback({ cancel: true })
+)
 }
 
 function createSettingsWindow() {
@@ -742,10 +762,19 @@ ipcMain.on('set-auto-resize-media', (e, enabled) => {
   if (overlayWindow) overlayWindow.webContents.send('set-auto-resize-media', enabled)
 })
 
+ipcMain.on('save-normal-bounds', () => {
+  if (!overlayWindow || overlayWindow.isDestroyed()) return
+  overlayNormalBounds = { ...overlayWindow.getBounds() }
+})
+
 ipcMain.on('resize-for-media', (e, { naturalWidth, naturalHeight }) => {
   if (!overlayWindow || overlayWindow.isDestroyed()) return
   if (!settings.autoResizeMedia) return
 
+   if (!overlayNormalBounds) {
+    overlayNormalBounds = { ...overlayWindow.getBounds() }
+  }
+  
   const bounds = overlayWindow.getBounds()
   const display = require('electron').screen.getDisplayMatching(bounds)
   const workArea = display.workArea
@@ -765,9 +794,14 @@ ipcMain.on('resize-for-media', (e, { naturalWidth, naturalHeight }) => {
   newW = Math.max(minW, newW)
   newH = Math.max(minH, newH)
 
-  overlayNormalBounds = bounds
+  let newX = bounds.x
+  let newY = bounds.y
+  if (newX + newW > workArea.x + workArea.width)  newX = workArea.x + workArea.width  - newW
+  if (newY + newH > workArea.y + workArea.height) newY = workArea.y + workArea.height - newH
+  if (newX < workArea.x) newX = workArea.x
+  if (newY < workArea.y) newY = workArea.y
 
-  overlayWindow.setBounds({ x: bounds.x, y: bounds.y, width: newW, height: newH }, true)
+  overlayWindow.setBounds({ x: newX, y: newY, width: newW, height: newH }, true)
 })
 
 ipcMain.on('reset-overlay-size', () => {
@@ -775,6 +809,7 @@ ipcMain.on('reset-overlay-size', () => {
   if (!settings.autoResizeMedia) return
   if (overlayNormalBounds) {
     overlayWindow.setBounds(overlayNormalBounds, true)
+    overlayNormalBounds = null
   }
 })
 
@@ -818,12 +853,21 @@ ipcMain.on('get-overlay-size', (e) => {
 
 ipcMain.on('set-click-through', (e, ignore) => {
   if (!overlayWindow) return
-  if (!ignore) { overlayWindow.setIgnoreMouseEvents(false); return }
+  if (!ignore) {
+    overlayWindow.setIgnoreMouseEvents(false)
+    return
+  }
   const cursor = screen.getCursorScreenPoint()
   const bounds = overlayWindow.getBounds()
-  const relY = cursor.y - bounds.y
-  if (relY <= 24) {
-    overlayWindow.setIgnoreMouseEvents(false)
+  const onWindow = cursor.x >= bounds.x && cursor.x <= bounds.x + bounds.width &&
+                   cursor.y >= bounds.y && cursor.y <= bounds.y + bounds.height
+  if (onWindow) {
+    const relY = cursor.y - bounds.y
+    if (relY <= 24) {
+      overlayWindow.setIgnoreMouseEvents(false)
+    } else {
+      overlayWindow.setIgnoreMouseEvents(true, { forward: true })
+    }
   } else {
     overlayWindow.setIgnoreMouseEvents(true, { forward: true })
   }
@@ -901,6 +945,20 @@ ipcMain.on('yt-view-create', (e, { videoId, x, y, width, height }) => {
         if (window.__overlayInjected) return
         window.__overlayInjected = true
 
+        setInterval(() => {
+          const btn = document.querySelector('.ytp-ad-skip-button, .ytp-skip-ad-button, .ytp-ad-skip-button-modern')
+          if (btn) btn.click()
+          const adShowing = document.querySelector('.ad-showing')
+          if (adShowing) {
+            const video = document.querySelector('video')
+            if (video && video.duration) video.currentTime = video.duration
+            if (video) video.muted = true
+          } else {
+            const video = document.querySelector('video')
+            if (video) video.muted = ${!settings.soundEnabled}
+          }
+        }, 20)
+
         ${noFs ? `
         Element.prototype.requestFullscreen = function() { return Promise.resolve() }
         document.addEventListener('fullscreenchange', () => {
@@ -911,6 +969,9 @@ ipcMain.on('yt-view-create', (e, { videoId, x, y, width, height }) => {
         const style = document.createElement('style')
         style.id = '__overlay-style'
         style.textContent =
+          '#masthead, ytd-masthead, #masthead-container, tp-yt-app-header { display:none!important }' +
+          'ytd-watch-flexy { --ytd-masthead-height: 0px!important }' +
+          '#page-manager { margin-top: 0!important; padding-top: 0!important }' +
           'ytd-masthead, #masthead-container { display:none!important }' +
           'ytd-watch-next-secondary-results-renderer, #secondary { display:none!important }' +
           '#below, #comments, ytd-miniplayer { display:none!important }' +
@@ -925,7 +986,7 @@ ipcMain.on('yt-view-create', (e, { videoId, x, y, width, height }) => {
           const player = document.getElementById('movie_player')
           const video  = document.querySelector('video.html5-main-video')
           if (!player || !video) return false
-
+          
           if (player.setVolume) player.setVolume(${Math.round((settings.soundEnabled ? settings.volume : 0) * 100)})
           if (player.unMute && ${settings.soundEnabled}) player.unMute()
           if (player.mute   && ${!settings.soundEnabled}) player.mute()

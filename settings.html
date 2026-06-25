@@ -6,168 +6,298 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {
-      --bg: #0f1012;
-      --sidebar: #151618;
-      --panel: #1a1b1e;
-      --card: #202226;
-      --border: #2a2b2f;
+      --bg: #0d0e10;
+      --surface: #131416;
+      --raised: #1a1b1e;
+      --border: #242528;
+      --border-subtle: #1e1f22;
       --accent: #5865F2;
-      --accent2: #4752c4;
-      --text: #e0e1e5;
-      --muted: #6b6f7a;
-      --green: #57f287;
+      --accent-dim: rgba(88,101,242,0.12);
+      --text: #e2e3e8;
+      --text-muted: #5a5d6b;
+      --text-secondary: #9a9dab;
+      --green: #3ba55d;
       --red: #ed4245;
       --orange: #f0a000;
     }
 
     html, body { height: 100%; overflow: hidden; }
-    body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100%; }
+    body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; }
 
-    .header { background: var(--sidebar); border-bottom: 1px solid var(--border); padding: 14px 14px 14px 20px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; -webkit-app-region: drag; user-select: none; -webkit-user-select: none; }
-    .header-right { display: flex; align-items: center; gap: 10px; -webkit-app-region: no-drag; }
-    .header-controls { display: flex; align-items: center; gap: 4px; }
-    .header-left { display: flex; align-items: center; gap: 10px; }
-    .logo-icon { width: 32px; height: 32px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
-    .header-title { font-size: 15px; font-weight: 700; color: white; }
-    .header-sub   { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    /* ── Titlebar ── */
+    .titlebar {
+      height: 44px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 12px 0 16px;
+      flex-shrink: 0;
+      -webkit-app-region: drag;
+      user-select: none; -webkit-user-select: none;
+    }
+    .titlebar-left { display: flex; align-items: center; gap: 10px; }
+    .titlebar-logo {
+      width: 26px; height: 26px;
+      background: var(--accent); border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px;
+    }
+    .titlebar-name { font-size: 13px; font-weight: 600; color: var(--text); letter-spacing: -0.1px; }
+    .titlebar-right { display: flex; align-items: center; gap: 8px; -webkit-app-region: no-drag; }
 
-    .status-pill { display: flex; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 5px 12px; font-size: 12px; color: var(--muted); }
-    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); }
-    .dot.on { background: var(--green); }
+    .status-badge {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 11px; color: var(--text-muted);
+      background: var(--raised); border: 1px solid var(--border);
+      border-radius: 20px; padding: 3px 10px;
+    }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); transition: background 0.3s; }
+    .status-dot.on { background: var(--green); }
 
+    .win-btn {
+      width: 26px; height: 26px; border: none; border-radius: 6px;
+      background: transparent; color: var(--text-muted);
+      cursor: pointer; font-size: 12px;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, color 0.15s;
+    }
+    .win-btn:hover { background: var(--raised); color: var(--text); }
+    .win-btn.close:hover { background: var(--red); color: white; }
+
+    /* ── Layout ── */
     .layout { display: flex; flex: 1; overflow: hidden; }
-    .sidebar { width: 130px; background: var(--sidebar); border-right: 1px solid var(--border); padding: 12px 8px; display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
-    .nav-item { padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer; transition: background 0.15s, color 0.15s; user-select: none; }
-    .nav-item:hover { background: var(--card); color: var(--text); }
-    .nav-item.active { background: var(--accent); color: white; }
 
-    .content { flex: 1; overflow-y: auto; padding: 20px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
-    .content::-webkit-scrollbar { width: 4px; }
+    .sidebar {
+      width: 112px; flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border-subtle);
+      padding: 10px 6px;
+      display: flex; flex-direction: column; gap: 1px;
+    }
+    .nav {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 10px; border-radius: 6px;
+      font-size: 12px; font-weight: 500; color: var(--text-muted);
+      cursor: pointer; transition: background 0.12s, color 0.12s;
+      user-select: none;
+    }
+    .nav:hover { background: var(--raised); color: var(--text-secondary); }
+    .nav.active { background: var(--accent-dim); color: var(--accent); }
+    .nav-icon { font-size: 13px; flex-shrink: 0; }
+
+    .content {
+      flex: 1; overflow-y: auto; padding: 18px 20px 60px;
+      scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+    }
+    .content::-webkit-scrollbar { width: 3px; }
     .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
     .tab { display: none; }
-    .tab.active { display: block; }
+    .tab.active { display: flex; flex-direction: column; gap: 8px; }
 
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 12px; }
-    .card-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 12px; }
-    .field-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; display: block; }
-    .hint { font-size: 11px; color: var(--muted); margin-top: 4px; opacity: 0.7; }
-    .input-row { display: flex; gap: 8px; }
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 10px 14px;
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.9px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .card-body { padding: 0; }
 
-    input[type="text"] { flex: 1; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 9px 12px; color: var(--text); font-size: 13px; outline: none; transition: border 0.15s; }
+    /* ── Rows ── */
+    .row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 11px 14px; gap: 16px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .row:last-child { border-bottom: none; }
+    .row-full { padding: 12px 14px; border-bottom: 1px solid var(--border-subtle); }
+    .row-full:last-child { border-bottom: none; }
+
+    .row-label { font-size: 13px; color: var(--text); flex-shrink: 0; }
+    .row-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .row-left { flex: 1; min-width: 0; }
+
+    /* ── Inputs ── */
+    .field-group { display: flex; gap: 7px; }
+    input[type="text"] {
+      flex: 1; background: var(--raised);
+      border: 1px solid var(--border); border-radius: 7px;
+      padding: 8px 11px; color: var(--text); font-size: 13px;
+      outline: none; transition: border-color 0.15s;
+    }
     input[type="text"]:focus { border-color: var(--accent); }
 
-    select { flex: 1; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 9px 12px; color: var(--text); font-size: 13px; outline: none; transition: border 0.15s; cursor: pointer; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%236b6f7a'/></svg>"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 30px; }
+    select {
+      flex: 1; background: var(--raised);
+      border: 1px solid var(--border); border-radius: 7px;
+      padding: 8px 28px 8px 11px; color: var(--text); font-size: 13px;
+      outline: none; cursor: pointer;
+      appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%235a5d6b'/></svg>");
+      background-repeat: no-repeat; background-position: right 11px center;
+      transition: border-color 0.15s;
+    }
     select:focus { border-color: var(--accent); }
-    select option { background: var(--panel); color: var(--text); }
+    select option { background: var(--raised); }
 
-    .btn { background: var(--accent); color: white; border: none; border-radius: 6px; padding: 9px 16px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s; white-space: nowrap; }
-    .btn:hover { background: var(--accent2); }
-    .btn.sm { padding: 6px 12px; font-size: 12px; }
-    .btn.danger { background: var(--red); }
-    .btn.danger:hover { background: #c0393b; }
-    .btn.warning { background: var(--orange); color: white; }
-    .btn.warning:hover { background: #cc8800; }
-    .btn.ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
-    .btn.ghost:hover { background: var(--border); }
+    /* ── Slider ── */
+    .slider-wrap { display: flex; align-items: center; gap: 10px; }
+    input[type="range"] {
+      flex: 1; accent-color: var(--accent);
+      cursor: pointer; height: 3px;
+    }
+    .slider-val { font-size: 12px; font-weight: 600; color: var(--accent); min-width: 36px; text-align: right; }
 
-    .slider-row { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
-    input[type="range"] { flex: 1; accent-color: var(--accent); cursor: pointer; height: 4px; }
-    .slider-val { font-size: 12px; color: var(--accent); min-width: 38px; text-align: right; font-weight: 600; }
-
-    .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 2px 0; }
-    .toggle-text { font-size: 13px; color: var(--text); }
-    .toggle-sub  { font-size: 11px; color: var(--muted); margin-top: 1px; }
-    .toggle { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
+    /* ── Toggle ── */
+    .toggle { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
     .toggle input { opacity: 0; width: 0; height: 0; }
-    .toggle-track { position: absolute; inset: 0; background: var(--border); border-radius: 22px; cursor: pointer; transition: background 0.2s; }
+    .toggle-track {
+      position: absolute; inset: 0;
+      background: var(--border); border-radius: 20px;
+      cursor: pointer; transition: background 0.2s;
+    }
     .toggle input:checked + .toggle-track { background: var(--accent); }
-    .toggle-track::after { content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%; background: white; top: 3px; left: 3px; transition: transform 0.2s; }
-    .toggle input:checked + .toggle-track::after { transform: translateX(18px); }
+    .toggle-track::after {
+      content: ''; position: absolute;
+      width: 14px; height: 14px; border-radius: 50%; background: white;
+      top: 3px; left: 3px; transition: transform 0.2s;
+    }
+    .toggle input:checked + .toggle-track::after { transform: translateX(16px); }
 
-    .collapsible { overflow: hidden; max-height: 0; opacity: 0; transition: max-height 0.25s ease, opacity 0.25s ease, margin-top 0.25s ease; margin-top: 0; }
-    .collapsible.open { max-height: 120px; opacity: 1; margin-top: 12px; }
+    /* ── Buttons ── */
+    .btn {
+      background: var(--accent); color: white; border: none;
+      border-radius: 7px; padding: 8px 14px;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: opacity 0.15s; white-space: nowrap;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn.sm { padding: 5px 11px; font-size: 12px; }
+    .btn.ghost { background: var(--raised); border: 1px solid var(--border); color: var(--text-secondary); }
+    .btn.ghost:hover { background: var(--border); opacity: 1; }
+    .btn.danger { background: var(--red); }
+    .btn.warning { background: var(--orange); }
+    .btn.full { width: 100%; }
 
-    .hotkey-box { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; font-size: 13px; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: border 0.15s; margin-top: 4px; }
+    /* ── Hotkey ── */
+    .hotkey-box {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--raised); border: 1px solid var(--border);
+      border-radius: 7px; padding: 7px 11px;
+      font-size: 13px; color: var(--text); cursor: pointer;
+      transition: border-color 0.15s;
+    }
     .hotkey-box.recording { border-color: var(--accent); color: var(--accent); }
-    .hotkey-clear { font-size: 11px; color: var(--muted); cursor: pointer; padding: 2px 6px; border-radius: 4px; transition: background 0.15s; }
+    .hotkey-clear {
+      font-size: 11px; color: var(--text-muted); cursor: pointer;
+      padding: 2px 5px; border-radius: 4px; transition: background 0.12s;
+    }
     .hotkey-clear:hover { background: var(--border); color: var(--text); }
 
-    .color-row { display: flex; align-items: center; gap: 12px; }
-    input[type="color"] { width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; background: none; padding: 2px; flex-shrink: 0; }
+    /* ── Chip buttons ── */
+    .chip-group { display: flex; gap: 5px; flex-wrap: wrap; }
+    .chip {
+      background: var(--raised); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text-muted);
+      font-size: 12px; font-weight: 600; padding: 4px 10px;
+      cursor: pointer; transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+    .chip:hover { background: var(--border); color: var(--text); }
+    .chip.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
 
-    .divider { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+    /* ── Color ── */
+    .color-row { display: flex; align-items: center; gap: 10px; }
+    input[type="color"] {
+      width: 32px; height: 32px; border: 1px solid var(--border);
+      border-radius: 7px; cursor: pointer; background: none; padding: 2px;
+    }
 
-    .saved { font-size: 11px; color: var(--green); min-height: 16px; opacity: 0; transition: opacity 0.2s; margin-top: 6px; }
-    .saved.show { opacity: 1; }
+    /* ── Collapsible ── */
+    .collapsible { overflow: hidden; max-height: 0; opacity: 0; transition: max-height 0.25s ease, opacity 0.2s ease; }
+    .collapsible.open { max-height: 80px; opacity: 1; }
 
-    .profile-list { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
-    .profile-item { display: flex; align-items: center; gap: 8px; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; }
+    /* ── Feedback ── */
+    .flash { font-size: 11px; color: var(--green); opacity: 0; transition: opacity 0.2s; min-height: 14px; margin-top: 5px; }
+    .flash.show { opacity: 1; }
+    .hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; line-height: 1.5; }
+
+    /* ── Profiles ── */
+    .profile-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 14px; border-bottom: 1px solid var(--border-subtle);
+    }
+    .profile-item:last-child { border-bottom: none; }
     .profile-name { flex: 1; font-size: 13px; color: var(--text); }
-    .profile-meta { font-size: 11px; color: var(--muted); }
-    .empty-profiles { font-size: 12px; color: var(--muted); text-align: center; padding: 20px 0; opacity: 0.6; }
+    .profile-meta { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+    .empty-profiles { padding: 24px; text-align: center; font-size: 12px; color: var(--text-muted); }
 
-    .title-btn { width: 28px; height: 28px; border: none; border-radius: 6px; background: var(--card); color: var(--muted); cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; transition: background 0.15s, color 0.15s; }
-    .title-btn:hover { background: var(--border); color: var(--text); }
-    .title-btn.close:hover { background: var(--red); color: white; }
-
+    /* ── Version badge ── */
     #version-badge {
       position: fixed; bottom: 10px; right: 12px;
-      display: flex; align-items: center; gap: 6px;
-      font-size: 11px; color: var(--muted);
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 20px; padding: 4px 10px;
+      display: flex; align-items: center; gap: 5px;
+      font-size: 11px; color: var(--text-muted);
+      background: var(--surface); border: 1px solid var(--border-subtle);
+      border-radius: 20px; padding: 3px 10px;
       z-index: 50; cursor: pointer; user-select: none;
       transition: border-color 0.15s, color 0.15s;
     }
     #version-badge:hover { border-color: var(--accent); color: var(--text); }
-    #version-badge .vb-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+    #version-badge .vb-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--text-muted); }
     #version-badge.up-to-date .vb-dot { background: var(--green); }
     #version-badge.available .vb-dot,
     #version-badge.downloading .vb-dot { background: var(--orange); }
     #version-badge.error .vb-dot { background: var(--red); }
-    #version-badge.checking .vb-dot { animation: vb-pulse 1s ease-in-out infinite; }
-    @keyframes vb-pulse { 0%,100% { opacity: 0.3; } 50% { opacity: 1; } }
+    #version-badge.checking .vb-dot { animation: pulse 1s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity: 0.3; } 50% { opacity: 1; } }
 
-    .res-btn, .fmt-btn {
-      background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
-      color: var(--muted); font-size: 12px; font-weight: 600; padding: 5px 12px;
-      cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s;
-    }
-    .res-btn:hover, .fmt-btn:hover { background: var(--card); color: var(--text); }
-    .res-btn.active, .fmt-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+    .custom-ua-row { display: none; margin-top: 8px; }
   </style>
 </head>
 <body>
 
-  <div class="header">
-    <div class="header-left">
-      <div class="logo-icon">💬</div>
-      <div>
-        <div class="header-title">Discord Overlay</div>
-        <div class="header-sub">Paramètres</div>
-      </div>
+  <div class="titlebar">
+    <div class="titlebar-left">
+      <div class="titlebar-logo">💬</div>
+      <span class="titlebar-name">Discord Overlay</span>
     </div>
-    <div class="header-right">
-      <div class="status-pill">
-        <div class="dot" id="dot"></div>
+    <div class="titlebar-right">
+      <div class="status-badge">
+        <div class="status-dot" id="dot"></div>
         <span id="status-text">Connexion…</span>
       </div>
-      <div class="header-controls">
-        <button class="title-btn" onclick="minimizeWindow()" title="Réduire">─</button>
-        <button class="title-btn close" onclick="closeWindow()" title="Fermer">✕</button>
-      </div>
+      <button class="win-btn" onclick="minimizeWindow()">─</button>
+      <button class="win-btn close" onclick="closeWindow()">✕</button>
     </div>
   </div>
 
   <div class="layout">
     <div class="sidebar">
-      <div class="nav-item active" onclick="showTab('general', this)">Général</div>
-      <div class="nav-item" onclick="showTab('affichage', this)">Affichage</div>
-      <div class="nav-item" onclick="showTab('son', this)">Son</div>
-      <div class="nav-item" onclick="showTab('messages', this)">Messages</div>
-      <div class="nav-item" onclick="showTab('profils', this)">Profils</div>
-      <div class="nav-item" onclick="showTab('youtube', this)">YouTube</div>
+      <div class="nav active" onclick="showTab('general', this)">
+        <span class="nav-icon">⚙️</span> Général
+      </div>
+      <div class="nav" onclick="showTab('affichage', this)">
+        <span class="nav-icon">🎨</span> Affichage
+      </div>
+      <div class="nav" onclick="showTab('son', this)">
+        <span class="nav-icon">🔊</span> Son
+      </div>
+      <div class="nav" onclick="showTab('messages', this)">
+        <span class="nav-icon">💬</span> Messages
+      </div>
+      <div class="nav" onclick="showTab('youtube', this)">
+        <span class="nav-icon">▶️</span> YouTube
+      </div>
+      <div class="nav" onclick="showTab('profils', this)">
+        <span class="nav-icon">📁</span> Profils
+      </div>
     </div>
 
     <div class="content">
@@ -175,21 +305,29 @@
       <!-- GÉNÉRAL -->
       <div class="tab active" id="tab-general">
         <div class="card">
-          <div class="card-title">Salon Discord</div>
-          <span class="field-label">ID du salon</span>
-          <div class="input-row">
-            <input type="text" id="channel-id" placeholder="ex: 123456789012345678">
-            <button class="btn" onclick="applyChannel()">Appliquer</button>
+          <div class="card-header">Salon Discord</div>
+          <div class="card-body">
+            <div class="row-full">
+              <div class="field-group">
+                <input type="text" id="channel-id" placeholder="ID du salon (ex: 123456789…)">
+                <button class="btn" onclick="applyChannel()">Appliquer</button>
+              </div>
+              <p class="hint">Clic droit sur le salon → Copier l'identifiant</p>
+              <div class="flash" id="saved-msg">✓ Salon mis à jour</div>
+            </div>
           </div>
-          <p class="hint">Clic droit sur le salon → Copier l'identifiant</p>
-          <div class="saved" id="saved-msg">✓ Salon mis à jour !</div>
         </div>
+
         <div class="card">
-          <div class="card-title">Overlay</div>
-          <span class="field-label">Opacité de la fenêtre</span>
-          <div class="slider-row">
-            <input type="range" id="opacity" min="0.2" max="1" step="0.05" value="0.9" oninput="updateOpacity(this.value)">
-            <span class="slider-val" id="opacity-val">90%</span>
+          <div class="card-header">Overlay</div>
+          <div class="card-body">
+            <div class="row-full">
+              <div class="row-sub" style="margin-bottom:6px;">Opacité de la fenêtre</div>
+              <div class="slider-wrap">
+                <input type="range" id="opacity" min="0.2" max="1" step="0.05" value="0.9" oninput="updateOpacity(this.value)">
+                <span class="slider-val" id="opacity-val">90%</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -197,51 +335,57 @@
       <!-- AFFICHAGE -->
       <div class="tab" id="tab-affichage">
         <div class="card">
-          <div class="card-title">Texte</div>
-          <span class="field-label">Taille des messages</span>
-          <div class="slider-row">
-            <input type="range" id="fontsize" min="10" max="22" step="1" value="14" oninput="updateFont(this.value)">
-            <span class="slider-val" id="font-val">14px</span>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-title">Dragbar</div>
-          <div class="toggle-row">
-            <div>
-              <div class="toggle-text">Masquer la dragbar</div>
-              <div class="toggle-sub">Cache la barre de déplacement de l'overlay</div>
+          <div class="card-header">Texte</div>
+          <div class="card-body">
+            <div class="row-full">
+              <div class="row-sub" style="margin-bottom:6px;">Taille des messages</div>
+              <div class="slider-wrap">
+                <input type="range" id="fontsize" min="10" max="22" step="1" value="14" oninput="updateFont(this.value)">
+                <span class="slider-val" id="font-val">14px</span>
+              </div>
             </div>
-            <label class="toggle">
-              <input type="checkbox" id="dragbar-lock" onchange="toggleDragbar(this.checked)">
-              <div class="toggle-track"></div>
-            </label>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-title">Redimensionnement automatique</div>
-          <div class="toggle-row">
-            <div>
-              <div class="toggle-text">Adapter la fenêtre au média</div>
-              <div class="toggle-sub">Redimensionne l'overlay selon le ratio de chaque image ou vidéo</div>
-            </div>
-            <label class="toggle">
-              <input type="checkbox" id="auto-resize-media" onchange="toggleAutoResizeMedia(this.checked)">
-              <div class="toggle-track"></div>
-            </label>
           </div>
         </div>
 
         <div class="card">
-          <div class="card-title">Fond des messages</div>
-          <span class="field-label">Couleur</span>
-          <div class="color-row">
-            <input type="color" id="bg-color" value="#0f0f19" onchange="updateBg()">
-            <div style="flex:1">
-              <span class="field-label">Opacité</span>
-              <div class="slider-row">
+          <div class="card-header">Fond des messages</div>
+          <div class="card-body">
+            <div class="row-full">
+              <div class="color-row" style="margin-bottom:10px;">
+                <input type="color" id="bg-color" value="#0f0f19" onchange="updateBg()">
+                <span class="row-sub">Couleur de fond</span>
+              </div>
+              <div class="row-sub" style="margin-bottom:6px;">Opacité</div>
+              <div class="slider-wrap">
                 <input type="range" id="bg-opacity" min="0" max="1" step="0.05" value="0.82" oninput="updateBg()">
                 <span class="slider-val" id="bg-opacity-val">82%</span>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">Fenêtre</div>
+          <div class="card-body">
+            <div class="row">
+              <div class="row-left">
+                <div class="row-label">Masquer la dragbar</div>
+                <div class="row-sub">Cache la barre de déplacement</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="dragbar-lock" onchange="toggleDragbar(this.checked)">
+                <div class="toggle-track"></div>
+              </label>
+            </div>
+            <div class="row">
+              <div class="row-left">
+                <div class="row-label">Adapter au média</div>
+                <div class="row-sub">Redimensionne selon l'image ou vidéo</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="auto-resize-media" onchange="toggleAutoResizeMedia(this.checked)">
+                <div class="toggle-track"></div>
+              </label>
             </div>
           </div>
         </div>
@@ -250,92 +394,112 @@
       <!-- SON -->
       <div class="tab" id="tab-son">
         <div class="card">
-          <div class="card-title">Son des vidéos</div>
-          <div class="toggle-row">
-            <div>
-              <div class="toggle-text">Activer le son</div>
-              <div class="toggle-sub">Joue le son des vidéos uploadées</div>
+          <div class="card-header">Volume</div>
+          <div class="card-body">
+            <div class="row">
+              <div class="row-left">
+                <div class="row-label">Activer le son</div>
+                <div class="row-sub">Joue le son des vidéos</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="sound-toggle" onchange="toggleSound(this.checked)">
+                <div class="toggle-track"></div>
+              </label>
             </div>
-            <label class="toggle">
-              <input type="checkbox" id="sound-toggle" onchange="toggleSound(this.checked)">
-              <div class="toggle-track"></div>
-            </label>
-          </div>
-          <div class="collapsible" id="volume-container">
-            <hr class="divider">
-            <span class="field-label">Volume</span>
-            <div class="slider-row">
-              <input type="range" id="volume" min="0" max="1" step="0.05" value="0.8" oninput="updateVolume(this.value)">
-              <span class="slider-val" id="volume-val">80%</span>
+            <div class="collapsible" id="volume-container">
+              <div class="row-full">
+                <div class="slider-wrap">
+                  <input type="range" id="volume" min="0" max="1" step="0.05" value="0.8" oninput="updateVolume(this.value)">
+                  <span class="slider-val" id="volume-val">80%</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
+
         <div class="card">
-          <div class="card-title">Raccourcis clavier</div>
-          <span class="field-label">Toggle son (global)</span>
-          <div id="hotkey-box" class="hotkey-box" onclick="startRecording('sound')">
-            <span id="hotkey-display">Cliquer pour définir…</span>
-            <span class="hotkey-clear" onclick="clearHotkey(event, 'sound')">✕</span>
+          <div class="card-header">Raccourcis globaux</div>
+          <div class="card-body">
+            <div class="row-full">
+              <div class="row-sub" style="margin-bottom:5px;">Toggle son</div>
+              <div id="hotkey-box" class="hotkey-box" onclick="startRecording('sound')">
+                <span id="hotkey-display">Cliquer pour définir…</span>
+                <span class="hotkey-clear" onclick="clearHotkey(event,'sound')">✕</span>
+              </div>
+            </div>
+            <div class="row-full">
+              <div class="row-sub" style="margin-bottom:5px;">Skip le média en cours</div>
+              <div id="skip-hotkey-box" class="hotkey-box" onclick="startRecording('skip')">
+                <span id="skip-hotkey-display">Cliquer pour définir…</span>
+                <span class="hotkey-clear" onclick="clearHotkey(event,'skip')">✕</span>
+              </div>
+            </div>
           </div>
-          <hr class="divider">
-          <span class="field-label" style="margin-top:8px;">Skip / fermer le média actuel (global)</span>
-          <div id="skip-hotkey-box" class="hotkey-box" onclick="startRecording('skip')">
-            <span id="skip-hotkey-display">Cliquer pour définir…</span>
-            <span class="hotkey-clear" onclick="clearHotkey(event, 'skip')">✕</span>
-          </div>
-          <p class="hint">Ferme le média en cours sur l'overlay.</p>
         </div>
       </div>
 
       <!-- MESSAGES -->
       <div class="tab" id="tab-messages">
         <div class="card">
-          <div class="card-title">Durée d'affichage</div>
-          <span class="field-label">Message texte</span>
-          <div class="slider-row">
-            <input type="range" id="duration-text" min="2" max="30" step="1" value="8" oninput="updateDurations()">
-            <span class="slider-val" id="duration-text-val">8s</span>
-          </div>
-          <hr class="divider">
-          <span class="field-label">GIF / Image</span>
-          <div class="slider-row">
-            <input type="range" id="duration-gif" min="2" max="30" step="1" value="8" oninput="updateDurations()">
-            <span class="slider-val" id="duration-gif-val">8s</span>
-          </div>
-          <hr class="divider">
-          <div class="toggle-row">
-            <div>
-              <div class="toggle-text">Audio : jusqu'à la fin</div>
-              <div class="toggle-sub">Disparaît quand l'audio se termine</div>
+          <div class="card-header">Durée d'affichage</div>
+          <div class="card-body">
+            <div class="row-full">
+              <div class="row-sub" style="margin-bottom:5px;">Texte</div>
+              <div class="slider-wrap">
+                <input type="range" id="duration-text" min="2" max="30" step="1" value="8" oninput="updateDurations()">
+                <span class="slider-val" id="duration-text-val">8s</span>
+              </div>
             </div>
-            <label class="toggle">
-              <input type="checkbox" id="audio-until-end" onchange="updateDurations()">
-              <div class="toggle-track"></div>
-            </label>
-          </div>
-          <div id="duration-audio-row" style="margin-top: 10px;">
-            <span class="field-label">Durée audio / Message vocal</span>
-            <div class="slider-row">
-              <input type="range" id="duration-audio" min="2" max="60" step="1" value="15" oninput="updateDurations()">
-              <span class="slider-val" id="duration-audio-val">15s</span>
+            <div class="row-full">
+              <div class="row-sub" style="margin-bottom:5px;">GIF / Image</div>
+              <div class="slider-wrap">
+                <input type="range" id="duration-gif" min="2" max="30" step="1" value="8" oninput="updateDurations()">
+                <span class="slider-val" id="duration-gif-val">8s</span>
+              </div>
+            </div>
+            <div class="row-full">
+              <div class="row-sub" style="margin-bottom:5px;">Vidéo</div>
+              <div id="duration-video-row">
+                <div class="slider-wrap">
+                  <input type="range" id="duration-video" min="2" max="60" step="1" value="10" oninput="updateDurations()">
+                  <span class="slider-val" id="duration-video-val">10s</span>
+                </div>
+              </div>
+            </div>
+            <div class="row-full">
+              <div class="row-sub" style="margin-bottom:5px;">Audio / Message vocal</div>
+              <div id="duration-audio-row">
+                <div class="slider-wrap">
+                  <input type="range" id="duration-audio" min="2" max="60" step="1" value="15" oninput="updateDurations()">
+                  <span class="slider-val" id="duration-audio-val">15s</span>
+                </div>
+              </div>
             </div>
           </div>
-          <hr class="divider">
-          <div class="toggle-row">
-            <div>
-              <div class="toggle-text">Vidéo : jusqu'à la fin</div>
-              <div class="toggle-sub">Disparaît quand la vidéo se termine</div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">Comportement</div>
+          <div class="card-body">
+            <div class="row">
+              <div class="row-left">
+                <div class="row-label">Vidéo jusqu'à la fin</div>
+                <div class="row-sub">Disparaît quand la vidéo se termine</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="video-until-end" onchange="updateDurations()">
+                <div class="toggle-track"></div>
+              </label>
             </div>
-            <label class="toggle">
-              <input type="checkbox" id="video-until-end" onchange="updateDurations()">
-              <div class="toggle-track"></div>
-            </label>
-          </div>
-          <div id="duration-video-row" style="margin-top: 10px;">
-            <span class="field-label">Durée vidéo</span>
-            <div class="slider-row">
-              <input type="range" id="duration-video" min="2" max="60" step="1" value="10" oninput="updateDurations()">
-              <span class="slider-val" id="duration-video-val">10s</span>
+            <div class="row">
+              <div class="row-left">
+                <div class="row-label">Audio jusqu'à la fin</div>
+                <div class="row-sub">Disparaît quand l'audio se termine</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="audio-until-end" onchange="updateDurations()">
+                <div class="toggle-track"></div>
+              </label>
             </div>
           </div>
         </div>
@@ -343,153 +507,140 @@
 
       <!-- YOUTUBE -->
       <div class="tab" id="tab-youtube">
-
-        <!-- Lecteur YouTube (BrowserView) -->
         <div class="card">
-          <div class="card-title">🎬 Lecteur YouTube — en direct</div>
-          <p class="hint" style="margin-bottom:12px;">S'applique immédiatement à la vidéo YouTube en cours sur l'overlay.</p>
-
-          <span class="field-label">Volume</span>
-          <div class="slider-row">
-            <input type="range" id="yt-live-volume" min="0" max="100" step="1" value="80" oninput="updateYtLiveVolume(this.value)">
-            <span class="slider-val" id="yt-live-volume-val">80%</span>
-          </div>
-
-          <hr class="divider">
-
-          <span class="field-label">Qualité du lecteur</span>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;" id="yt-live-quality-btns">
-            <button class="res-btn" data-q="tiny"   onclick="setYtLiveQuality(this)">144p</button>
-            <button class="res-btn" data-q="small"  onclick="setYtLiveQuality(this)">240p</button>
-            <button class="res-btn" data-q="medium" onclick="setYtLiveQuality(this)">360p</button>
-            <button class="res-btn" data-q="large"  onclick="setYtLiveQuality(this)">480p</button>
-            <button class="res-btn" data-q="hd720"  onclick="setYtLiveQuality(this)">720p</button>
-            <button class="res-btn active" data-q="hd1080" onclick="setYtLiveQuality(this)">1080p</button>
-            <button class="res-btn" data-q="hd1440" onclick="setYtLiveQuality(this)">1440p</button>
-            <button class="res-btn" data-q="hd2160" onclick="setYtLiveQuality(this)">4K</button>
-          </div>
-
-          <hr class="divider">
-
-          <span class="field-label">Navigateur simulé (User-Agent)</span>
-          <select id="yt-ua-preset" onchange="onYtUaPresetChange()">
-            <option value="chrome-win">Chrome — Windows (recommandé)</option>
-            <option value="chrome-mac">Chrome — macOS</option>
-            <option value="firefox-win">Firefox — Windows</option>
-            <option value="edge-win">Edge — Windows</option>
-            <option value="safari-mac">Safari — macOS</option>
-            <option value="chrome-linux">Chrome — Linux</option>
-            <option value="custom">Personnalisé…</option>
-          </select>
-          <div class="hint">Change ce que YouTube voit comme navigateur. Utile si une vidéo refuse de se charger ou affiche une page différente. Chrome Windows fonctionne dans la grande majorité des cas.</div>
-          <div class="input-row" id="yt-ua-custom-row" style="display:none;margin-top:8px;">
-            <input type="text" id="yt-ua-custom" placeholder="Mozilla/5.0 (...)" onchange="saveYtUserAgent()">
-          </div>
-
-          <hr class="divider">
-
-          <div class="toggle-row">
-            <div>
-              <div class="toggle-text">Désactiver le plein écran</div>
-              <div class="toggle-sub">Empêche la vidéo de passer en plein écran</div>
+          <div class="card-header">Lecteur YouTube — live</div>
+          <div class="card-body">
+            <div class="row-full">
+              <div class="row-sub" style="margin-bottom:5px;">Volume</div>
+              <div class="slider-wrap">
+                <input type="range" id="yt-live-volume" min="0" max="100" step="1" value="80" oninput="updateYtLiveVolume(this.value)">
+                <span class="slider-val" id="yt-live-volume-val">80%</span>
+              </div>
             </div>
-            <label class="toggle">
-              <input type="checkbox" id="yt-no-fullscreen" checked onchange="saveYtPlayerSettings()">
-              <div class="toggle-track"></div>
-            </label>
+            <div class="row-full">
+              <div class="row-sub" style="margin-bottom:6px;">Qualité</div>
+              <div class="chip-group" id="yt-live-quality-btns">
+                <button class="chip" data-q="tiny"   onclick="setYtLiveQuality(this)">144p</button>
+                <button class="chip" data-q="small"  onclick="setYtLiveQuality(this)">240p</button>
+                <button class="chip" data-q="medium" onclick="setYtLiveQuality(this)">360p</button>
+                <button class="chip" data-q="large"  onclick="setYtLiveQuality(this)">480p</button>
+                <button class="chip" data-q="hd720"  onclick="setYtLiveQuality(this)">720p</button>
+                <button class="chip active" data-q="hd1080" onclick="setYtLiveQuality(this)">1080p</button>
+                <button class="chip" data-q="hd1440" onclick="setYtLiveQuality(this)">1440p</button>
+                <button class="chip" data-q="hd2160" onclick="setYtLiveQuality(this)">4K</button>
+              </div>
+            </div>
+            <div class="row">
+              <div class="row-left">
+                <div class="row-label">Bloquer le plein écran</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="yt-no-fullscreen" checked onchange="saveYtPlayerSettings()">
+                <div class="toggle-track"></div>
+              </label>
+            </div>
+            <div class="row-full">
+              <div class="row-sub" style="margin-bottom:5px;">Navigateur simulé (User-Agent)</div>
+              <select id="yt-ua-preset" onchange="onYtUaPresetChange()">
+                <option value="chrome-win">Chrome — Windows (recommandé)</option>
+                <option value="chrome-mac">Chrome — macOS</option>
+                <option value="firefox-win">Firefox — Windows</option>
+                <option value="edge-win">Edge — Windows</option>
+                <option value="safari-mac">Safari — macOS</option>
+                <option value="chrome-linux">Chrome — Linux</option>
+                <option value="custom">Personnalisé…</option>
+              </select>
+              <div class="custom-ua-row" id="yt-ua-custom-row" style="margin-top:7px;">
+                <input type="text" id="yt-ua-custom" placeholder="Mozilla/5.0 (…)" onchange="saveYtUserAgent()">
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- yt-dlp (Twitch, TikTok, etc.) -->
         <div class="card">
-          <div class="card-title">⬇️ yt-dlp — téléchargement</div>
-          <p class="hint" style="margin-bottom:12px;">Paramètres pour les vidéos téléchargées via yt-dlp (Twitch, TikTok, Reddit…). Nécessitent de sauvegarder.</p>
-
-          <span class="field-label">Résolution maximale</span>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;" id="resolution-btns">
-            <button class="res-btn" data-res="360">360p</button>
-            <button class="res-btn" data-res="480">480p</button>
-            <button class="res-btn" data-res="720">720p</button>
-            <button class="res-btn active" data-res="1080">1080p</button>
-            <button class="res-btn" data-res="1440">1440p</button>
-            <button class="res-btn" data-res="2160">4K</button>
-            <button class="res-btn" data-res="best">Max</button>
-          </div>
-          <p class="hint">Max = meilleure qualité disponible.</p>
-
-          <hr class="divider">
-
-          <span class="field-label">Format préféré</span>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;" id="format-btns">
-            <button class="fmt-btn active" data-fmt="mp4">mp4</button>
-            <button class="fmt-btn" data-fmt="webm">webm</button>
-            <button class="fmt-btn" data-fmt="any">Auto</button>
-          </div>
-          <p class="hint">mp4 = universel. webm = souvent meilleure qualité. Auto = yt-dlp choisit.</p>
-
-          <hr class="divider">
-
-          <span class="field-label">Délai maximum (timeout)</span>
-          <div class="slider-row">
-            <input type="range" id="yt-timeout" min="5" max="60" step="5" value="30" oninput="document.getElementById('yt-timeout-val').textContent = this.value + 's'">
-            <span class="slider-val" id="yt-timeout-val">30s</span>
-          </div>
-
-          <hr class="divider">
-
-          <div class="toggle-row" style="margin-bottom:10px;">
-            <div>
-              <div class="toggle-text">Sous-titres automatiques</div>
-              <div class="toggle-sub">Intègre les sous-titres si disponibles</div>
+          <div class="card-header">yt-dlp — Twitch / TikTok / Reddit…</div>
+          <div class="card-body">
+            <div class="row-full">
+              <div class="row-sub" style="margin-bottom:6px;">Résolution max</div>
+              <div class="chip-group" id="resolution-btns">
+                <button class="chip" data-res="360">360p</button>
+                <button class="chip" data-res="480">480p</button>
+                <button class="chip" data-res="720">720p</button>
+                <button class="chip active" data-res="1080">1080p</button>
+                <button class="chip" data-res="1440">1440p</button>
+                <button class="chip" data-res="2160">4K</button>
+                <button class="chip" data-res="best">Max</button>
+              </div>
             </div>
-            <label class="toggle">
-              <input type="checkbox" id="yt-subtitles">
-              <div class="toggle-track"></div>
-            </label>
-          </div>
-          <div class="toggle-row" style="margin-bottom:10px;">
-            <div>
-              <div class="toggle-text">Forcer le ré-encodage</div>
-              <div class="toggle-sub">Plus lent mais évite les problèmes de codec</div>
+            <div class="row-full">
+              <div class="row-sub" style="margin-bottom:6px;">Format</div>
+              <div class="chip-group" id="format-btns">
+                <button class="chip active" data-fmt="mp4">mp4</button>
+                <button class="chip" data-fmt="webm">webm</button>
+                <button class="chip" data-fmt="any">Auto</button>
+              </div>
             </div>
-            <label class="toggle">
-              <input type="checkbox" id="yt-reencode">
-              <div class="toggle-track"></div>
-            </label>
+            <div class="row-full">
+              <div class="row-sub" style="margin-bottom:5px;">Timeout</div>
+              <div class="slider-wrap">
+                <input type="range" id="yt-timeout" min="5" max="60" step="5" value="30" oninput="document.getElementById('yt-timeout-val').textContent = this.value+'s'">
+                <span class="slider-val" id="yt-timeout-val">30s</span>
+              </div>
+            </div>
+            <div class="row">
+              <div class="row-left">
+                <div class="row-label">Sous-titres automatiques</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="yt-subtitles">
+                <div class="toggle-track"></div>
+              </label>
+            </div>
+            <div class="row">
+              <div class="row-left">
+                <div class="row-label">Forcer le ré-encodage</div>
+                <div class="row-sub">Plus lent, évite les problèmes de codec</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="yt-reencode">
+                <div class="toggle-track"></div>
+              </label>
+            </div>
+            <div class="row-full">
+              <div class="row-sub" style="margin-bottom:5px;">Arguments personnalisés</div>
+              <input type="text" id="yt-extra-args" placeholder="ex: --proxy socks5://…">
+            </div>
           </div>
-
-          <hr class="divider">
-
-          <span class="field-label">Arguments yt-dlp personnalisés</span>
-          <input type="text" id="yt-extra-args" placeholder="ex: --proxy socks5://... --cookies-from-browser chrome" style="margin-top:4px;">
-          <p class="hint">Arguments bruts ajoutés à chaque appel. Laisser vide si vous ne savez pas.</p>
         </div>
 
-        <div style="margin-top:4px;">
-          <button class="btn" onclick="saveYtSettings()" style="width:100%;">💾 Sauvegarder les paramètres yt-dlp</button>
-          <div class="saved" id="yt-saved">✓ Paramètres sauvegardés !</div>
-        </div>
+        <button class="btn full" onclick="saveYtSettings()">Sauvegarder yt-dlp</button>
+        <div class="flash" id="yt-saved">✓ Paramètres sauvegardés</div>
       </div>
 
       <!-- PROFILS -->
       <div class="tab" id="tab-profils">
         <div class="card">
-          <div class="card-title">Sauvegarder le profil actuel</div>
-          <span class="field-label">Nom du profil</span>
-          <div class="input-row">
-            <input type="text" id="profile-name" placeholder="ex: Gaming, Stream…">
-            <button class="btn" onclick="saveProfile()">Sauvegarder</button>
+          <div class="card-header">Nouveau profil</div>
+          <div class="card-body">
+            <div class="row-full">
+              <div class="field-group">
+                <input type="text" id="profile-name" placeholder="Nom du profil…">
+                <button class="btn" onclick="saveProfile()">Sauvegarder</button>
+              </div>
+              <div class="flash" id="profile-saved">✓ Profil sauvegardé</div>
+            </div>
           </div>
-          <p class="hint">Sauvegarde : position, taille, opacité, fond, taille du texte</p>
-          <div class="saved" id="profile-saved">✓ Profil sauvegardé !</div>
         </div>
+
         <div class="card">
-          <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
+          <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
             Profils sauvegardés
-            <button class="btn sm ghost" onclick="openProfilesFolder()">📁 Ouvrir le dossier</button>
+            <button class="btn sm ghost" onclick="openProfilesFolder()">📁 Dossier</button>
           </div>
-          <div class="profile-list" id="profile-list">
-            <div class="empty-profiles">Aucun profil sauvegardé</div>
+          <div class="card-body">
+            <div id="profile-list">
+              <div class="empty-profiles">Aucun profil sauvegardé</div>
+            </div>
           </div>
         </div>
       </div>
@@ -497,7 +648,7 @@
     </div>
   </div>
 
-  <div id="version-badge" onclick="checkForUpdates()" title="Cliquer pour vérifier les mises à jour">
+  <div id="version-badge" onclick="checkForUpdates()" title="Vérifier les mises à jour">
     <span class="vb-dot"></span>
     <span id="version-text">v…</span>
   </div>
@@ -510,7 +661,7 @@
 
     function showTab(name, el) {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'))
-      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'))
+      document.querySelectorAll('.nav').forEach(n => n.classList.remove('active'))
       document.getElementById('tab-' + name).classList.add('active')
       el.classList.add('active')
     }
@@ -561,17 +712,13 @@
         document.getElementById('audio-until-end').checked = s.audioUntilEnd
         document.getElementById('duration-audio-row').style.display = s.audioUntilEnd ? 'none' : ''
       }
-      if (s.dragbarHidden !== undefined) {
-        document.getElementById('dragbar-lock').checked = !!s.dragbarHidden
-      }
-      if (s.autoResizeMedia !== undefined) {
-        document.getElementById('auto-resize-media').checked = !!s.autoResizeMedia
-      }
+      if (s.dragbarHidden !== undefined) document.getElementById('dragbar-lock').checked = !!s.dragbarHidden
+      if (s.autoResizeMedia !== undefined) document.getElementById('auto-resize-media').checked = !!s.autoResizeMedia
       if (s.ytResolution) {
-        document.querySelectorAll('#resolution-btns .res-btn').forEach(b => b.classList.toggle('active', b.dataset.res === s.ytResolution))
+        document.querySelectorAll('#resolution-btns .chip').forEach(b => b.classList.toggle('active', b.dataset.res === s.ytResolution))
       }
       if (s.ytFormat) {
-        document.querySelectorAll('.fmt-btn').forEach(b => b.classList.toggle('active', b.dataset.fmt === s.ytFormat))
+        document.querySelectorAll('#format-btns .chip').forEach(b => b.classList.toggle('active', b.dataset.fmt === s.ytFormat))
       }
       if (s.ytTimeout !== undefined) {
         const sec = Math.round(s.ytTimeout / 1000)
@@ -587,11 +734,9 @@
         document.getElementById('yt-live-volume-val').textContent = pct + '%'
       }
       if (s.ytQuality) {
-        document.querySelectorAll('#yt-live-quality-btns .res-btn').forEach(b => b.classList.toggle('active', b.dataset.q === s.ytQuality))
+        document.querySelectorAll('#yt-live-quality-btns .chip').forEach(b => b.classList.toggle('active', b.dataset.q === s.ytQuality))
       }
-      if (s.ytNoFullscreen !== undefined) {
-        document.getElementById('yt-no-fullscreen').checked = !!s.ytNoFullscreen
-      }
+      if (s.ytNoFullscreen !== undefined) document.getElementById('yt-no-fullscreen').checked = !!s.ytNoFullscreen
       if (s.ytUaPreset) {
         document.getElementById('yt-ua-preset').value = s.ytUaPreset
         document.getElementById('yt-ua-custom-row').style.display = s.ytUaPreset === 'custom' ? '' : 'none'
@@ -600,7 +745,7 @@
     })
 
     ipcRenderer.on('status', (e, data) => {
-      document.getElementById('dot').className = 'dot' + (data.ok ? ' on' : '')
+      document.getElementById('dot').className = 'status-dot' + (data.ok ? ' on' : '')
       document.getElementById('status-text').textContent = data.ok ? data.tag : 'Erreur'
     })
 
@@ -618,11 +763,11 @@
         const b = p.overlayBounds
         const safe = name.replace(/\\/g,'\\\\').replace(/'/g,"\\'")
         return `<div class="profile-item">
-          <div>
+          <div class="row-left">
             <div class="profile-name">${name}</div>
-            <div class="profile-meta">${b.width}×${b.height} — opacité ${Math.round(p.opacity*100)}% — ${p.fontSize}px</div>
+            <div class="profile-meta">${b.width}×${b.height} · ${Math.round(p.opacity*100)}% opacité · ${p.fontSize}px</div>
           </div>
-          <button class="btn sm ghost"   onclick="loadProfile('${safe}')">Charger</button>
+          <button class="btn sm ghost" onclick="loadProfile('${safe}')">Charger</button>
           <button class="btn sm warning" onclick="overwriteProfile('${safe}')">Écraser</button>
           <button class="btn sm danger"  onclick="deleteProfile('${safe}')">✕</button>
         </div>`
@@ -697,7 +842,7 @@
     function startRecording(type) {
       if (recording) return
       recording = type
-      const boxId = type === 'sound' ? 'hotkey-box' : 'skip-hotkey-box'
+      const boxId  = type === 'sound' ? 'hotkey-box' : 'skip-hotkey-box'
       const dispId = type === 'sound' ? 'hotkey-display' : 'skip-hotkey-display'
       document.getElementById(boxId).classList.add('recording')
       document.getElementById(dispId).textContent = 'En attente…'
@@ -721,9 +866,9 @@
       if (e.ctrlKey) mods.push('Ctrl'); if (e.shiftKey) mods.push('Shift'); if (e.altKey) mods.push('Alt')
       if (!ignore.includes(e.key)) {
         const key = e.key === ' ' ? 'Space' : e.key.length === 1 ? e.key.toUpperCase() : e.key
-        const acc = [...mods, key].join('+')
+        const acc  = [...mods, key].join('+')
         const type = recording
-        recording = null
+        recording  = null
         const boxId = type === 'sound' ? 'hotkey-box' : 'skip-hotkey-box'
         document.getElementById(boxId).classList.remove('recording')
         setHotkeyDisplay(type, acc)
@@ -746,8 +891,7 @@
     let currentAppVersion = ''
 
     function setBadge(statusClass, text) {
-      const badge = document.getElementById('version-badge')
-      badge.className = statusClass
+      document.getElementById('version-badge').className = statusClass
       document.getElementById('version-text').textContent = text
     }
 
@@ -773,23 +917,23 @@
       ipcRenderer.send('check-for-updates')
     }
 
-    document.querySelectorAll('.res-btn').forEach(btn => {
+    document.querySelectorAll('#resolution-btns .chip').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.res-btn').forEach(b => b.classList.remove('active'))
+        document.querySelectorAll('#resolution-btns .chip').forEach(b => b.classList.remove('active'))
         btn.classList.add('active')
       })
     })
 
-    document.querySelectorAll('.fmt-btn').forEach(btn => {
+    document.querySelectorAll('#format-btns .chip').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.fmt-btn').forEach(b => b.classList.remove('active'))
+        document.querySelectorAll('#format-btns .chip').forEach(b => b.classList.remove('active'))
         btn.classList.add('active')
       })
     })
 
     function saveYtSettings() {
-      const res       = document.querySelector('#resolution-btns .res-btn.active')?.dataset.res || 'best'
-      const fmt       = document.querySelector('.fmt-btn.active')?.dataset.fmt || 'mp4'
+      const res       = document.querySelector('#resolution-btns .chip.active')?.dataset.res || 'best'
+      const fmt       = document.querySelector('#format-btns .chip.active')?.dataset.fmt || 'mp4'
       const timeout   = parseInt(document.getElementById('yt-timeout').value) * 1000
       const extraArgs = document.getElementById('yt-extra-args').value.trim()
       const subtitles = document.getElementById('yt-subtitles').checked
@@ -799,16 +943,14 @@
     }
 
     function updateYtLiveVolume(val) {
-      const pct = Math.round(val)
-      document.getElementById('yt-live-volume-val').textContent = pct + '%'
-      ipcRenderer.send('set-yt-live-volume', pct)
+      document.getElementById('yt-live-volume-val').textContent = Math.round(val) + '%'
+      ipcRenderer.send('set-yt-live-volume', Math.round(val))
     }
 
     function setYtLiveQuality(btn) {
-      document.querySelectorAll('#yt-live-quality-btns .res-btn').forEach(b => b.classList.remove('active'))
+      document.querySelectorAll('#yt-live-quality-btns .chip').forEach(b => b.classList.remove('active'))
       btn.classList.add('active')
-      const q = btn.dataset.q
-      ipcRenderer.send('set-yt-live-quality', q)
+      ipcRenderer.send('set-yt-live-quality', btn.dataset.q)
       saveYtPlayerSettings()
     }
 
@@ -825,7 +967,7 @@
     }
 
     function saveYtPlayerSettings() {
-      const q = document.querySelector('#yt-live-quality-btns .res-btn.active')?.dataset.q || 'hd1080'
+      const q = document.querySelector('#yt-live-quality-btns .chip.active')?.dataset.q || 'hd1080'
       const noFullscreen = document.getElementById('yt-no-fullscreen').checked
       ipcRenderer.send('set-yt-player-settings', { ytQuality: q, ytNoFullscreen: noFullscreen })
     }

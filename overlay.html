@@ -83,7 +83,7 @@
       height: 32px;
     }
 
-    body.media-mode .content { flex: 1; min-height: 0; padding-top: 32px; }
+    body.media-mode .content { flex: 1; min-height: 0; padding-top: 0; }
     body.media-mode .msg { position: relative; }
 
     body.media-mode .content img,
@@ -94,7 +94,6 @@
       border-radius: 0; margin-top: 0; display: block;
     }
 
-    /* Pause overlay on media */
     .media-click-zone {
       position: absolute;
       inset: 32px 0 0 0;
@@ -118,7 +117,6 @@
     .media-click-zone:hover .pause-icon { opacity: 0.7; }
     .media-click-zone.paused .pause-icon { opacity: 1; }
 
-    /* Skip button */
     .skip-btn {
       position: absolute;
       top: 4px;
@@ -135,6 +133,8 @@
       transition: opacity 0.15s, background 0.15s;
     }
 
+    
+
     body.media-mode .msg:hover .skip-btn { opacity: 1; }
     .skip-btn:hover { background: rgba(237,66,69,0.7); color: white; }
 
@@ -144,7 +144,7 @@
       border: 2px solid rgba(88, 101, 242, 0);
       border-radius: 8px;
       pointer-events: none;
-      transition: border-color 0.15s;
+      transition: border-color 0.15s, width 0.3s cubic-bezier(0.22, 1, 0.36, 1), height 0.3s cubic-bezier(0.22, 1, 0.36, 1);
       z-index: 9999;
     }
 
@@ -471,7 +471,7 @@
   const borderPreview = document.getElementById('border-preview')
 
   function updateClickThrough() {
-    const hasMessages = document.querySelectorAll('.msg').length > 0
+    const hasMessages = document.querySelectorAll('.msg:not(.removing)').length > 0
     ipcRenderer.send('set-click-through', !hasMessages)
   }
 
@@ -480,6 +480,8 @@
     ipcRenderer.send('resize-for-media', { naturalWidth, naturalHeight })
   }
 
+  updateClickThrough()
+
   document.addEventListener('mousemove', updateClickThrough)
   document.addEventListener('mouseleave', () => {
     updateClickThrough()
@@ -487,44 +489,72 @@
     sizeHint.style.opacity = '0'
   })
 
-  ipcRenderer.on('dragbar-hover', (e, hovering) => {
-    if (hovering) { borderPreview.classList.add('visible'); ipcRenderer.send('get-overlay-size') }
-    else { borderPreview.classList.remove('visible'); sizeHint.style.opacity = '0' }
-  })
+ ipcRenderer.on('dragbar-hover', (e, hovering) => {
+  if (hovering) {
+    borderPreview.classList.add('visible')
+    ipcRenderer.send('get-overlay-size')
+  } else {
+    borderPreview.classList.remove('visible')
+    borderPreview.style.width = ''
+    borderPreview.style.height = ''
+    borderPreview.style.inset = '0'
+    sizeHint.style.opacity = '0'
+  }
+})
 
   ipcRenderer.on('overlay-size', (e, { width, height }) => {
-    sizeHint.textContent = `${width} × ${height}`
-    sizeHint.style.opacity = '1'
-  })
+  sizeHint.textContent = `${width} × ${height}`
+  sizeHint.style.opacity = '1'
+  borderPreview.style.width = width + 'px'
+  borderPreview.style.height = height + 'px'
+  borderPreview.style.inset = 'unset'
+  borderPreview.style.top = '0'
+  borderPreview.style.left = '0'
+})
 
 
   function removeMsg(div) {
-    if (div._removing) return
-    div._removing = true
-    if (div._audioEl) { try { div._audioEl.pause() } catch(e){} }
-    const vid = div.querySelector('video')
-    if (vid) { try { vid.pause() } catch(e){} }
+  if (div._removing) return
+  div._removing = true
+  if (div._audioEl) { try { div._audioEl.pause() } catch(e){} }
+  const vid = div.querySelector('video')
+  if (vid) { try { vid.pause() } catch(e){} }
 
-    const h = div.getBoundingClientRect().height
-    div.style.maxHeight = h + 'px'
-    div.style.transition = [
-      'opacity 0.35s ease', 'transform 0.35s ease',
-      'max-height 0.4s cubic-bezier(0.4,0,0.2,1)',
-      'padding 0.4s ease', 'margin 0.4s ease'
-    ].join(', ')
-    div.getBoundingClientRect()
-    div.classList.add('removing')
-    div.addEventListener('transitionend', (e) => {
-      if (e.propertyName !== 'max-height') return
-      div.remove()
-      updateClickThrough()
-      requestAnimationFrame(() => {
-        const remaining = document.querySelectorAll('.msg')
-        const lastIsMedia = remaining.length > 0 && remaining[remaining.length - 1].querySelector('img, video')
-        document.body.classList.toggle('media-mode', !!lastIsMedia)
-      })
-    }, { once: true })
-  }
+  const h = div.getBoundingClientRect().height
+  div.style.maxHeight = h + 'px'
+  div.style.transition = [
+    'opacity 0.35s ease', 'transform 0.35s ease',
+    'max-height 0.4s cubic-bezier(0.4,0,0.2,1)',
+    'padding 0.4s ease', 'margin 0.4s ease'
+  ].join(', ')
+  div.getBoundingClientRect()
+  div.classList.add('removing')
+  setTimeout(() => {
+  const wasMedia = div.classList.contains('media-msg')
+  div.remove()
+  updateClickThrough()
+  if (!wasMedia) return
+  requestAnimationFrame(() => {
+    const remaining = Array.from(document.querySelectorAll('.msg:not(.removing)'))
+    const mediaMessages = remaining.filter(m => m.classList.contains('media-msg') && m.querySelector('img, video'))
+    if (mediaMessages.length === 0) {
+      document.body.classList.remove('media-mode')
+      ipcRenderer.send('reset-overlay-size')
+    } else {
+      const lastMedia = mediaMessages[mediaMessages.length - 1]
+      const vid = lastMedia.querySelector('video')
+      const img = lastMedia.querySelector('img')
+      const mw = lastMedia._mediaWidth || vid?.videoWidth
+      const mh = lastMedia._mediaHeight || vid?.videoHeight
+      if (mw && mh) {
+        ipcRenderer.send('resize-for-media', { naturalWidth: mw, naturalHeight: mh })
+      } else if (img?.naturalWidth) {
+        ipcRenderer.send('resize-for-media', { naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight })
+      }
+    }
+  })
+}, 420)
+}
 
 
   function skipCurrentMedia() {
@@ -773,9 +803,17 @@
     const { player, vid } = buildYtDlpPlayer(data, div)
     contentEl.appendChild(player)
 
+
+    vid.addEventListener('loadedmetadata', () => {
+  div._mediaWidth = vid.videoWidth
+  div._mediaHeight = vid.videoHeight
+})
+
     if (autoResizeMedia) {
       const onMeta = () => { if (vid.videoWidth && vid.videoHeight) notifyMediaSize(vid.videoWidth, vid.videoHeight) }
-      if (vid.videoWidth) onMeta(); else vid.addEventListener('loadedmetadata', onMeta, { once: true })
+      if (vid.videoWidth) onMeta();
+       else 
+        vid.addEventListener('loadedmetadata', onMeta, { once: true })
     }
 
     const dur = data.duration ? data.duration * 1000 : durationVideo
