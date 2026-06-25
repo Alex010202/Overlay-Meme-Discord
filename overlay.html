@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 <!DOCTYPE html>
 <html>
 <head>
@@ -45,9 +44,7 @@
       background: transparent;
     }
 
-    body.dragbar-hidden #dragbar span {
-      display: none;
-    }
+    body.dragbar-hidden #dragbar span { display: none; }
 
     #dragbar span {
       font-size: 10px;
@@ -65,15 +62,8 @@
       justify-content: flex-start;
     }
 
-    #messages .msg:last-child {
-      flex: 1;
-      min-height: 0;
-    }
-
-    body.media-mode #messages {
-      padding: 0;
-      gap: 0;
-    }
+    body.media-mode #messages .msg:last-child { flex: 1; min-height: 0; }
+    body.media-mode #messages { padding: 0; gap: 0; }
 
     body.media-mode .msg {
       border-left: none;
@@ -85,9 +75,7 @@
 
     body.media-mode .msg-top {
       position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
+      top: 0; left: 0; right: 0;
       padding: 6px 10px;
       background: linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, transparent 100%);
       margin-bottom: 0;
@@ -95,26 +83,60 @@
       height: 32px;
     }
 
-    body.media-mode .content {
-      flex: 1;
-      min-height: 0;
-      padding-top: 32px;
-    }
-
-    body.media-mode .msg {
-      position: relative;
-    }
+    body.media-mode .content { flex: 1; min-height: 0; padding-top: 32px; }
+    body.media-mode .msg { position: relative; }
 
     body.media-mode .content img,
     body.media-mode .content video {
-      width: 100%;
-      height: 100%;
+      width: 100%; height: 100%;
       max-height: none;
       object-fit: contain;
-      border-radius: 0;
-      margin-top: 0;
-      display: block;
+      border-radius: 0; margin-top: 0; display: block;
     }
+
+    /* Pause overlay on media */
+    .media-click-zone {
+      position: absolute;
+      inset: 32px 0 0 0;
+      z-index: 3;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .pause-icon {
+      opacity: 0;
+      font-size: 48px;
+      color: white;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.7);
+      transition: opacity 0.15s;
+      pointer-events: none;
+      filter: drop-shadow(0 0 8px rgba(0,0,0,0.8));
+    }
+
+    .media-click-zone:hover .pause-icon { opacity: 0.7; }
+    .media-click-zone.paused .pause-icon { opacity: 1; }
+
+    /* Skip button */
+    .skip-btn {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      z-index: 4;
+      background: rgba(0,0,0,0.5);
+      border: none;
+      border-radius: 4px;
+      color: rgba(255,255,255,0.6);
+      font-size: 11px;
+      padding: 3px 7px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s, background 0.15s;
+    }
+
+    body.media-mode .msg:hover .skip-btn { opacity: 1; }
+    .skip-btn:hover { background: rgba(237,66,69,0.7); color: white; }
 
     #border-preview {
       position: fixed;
@@ -126,9 +148,7 @@
       z-index: 9999;
     }
 
-    #border-preview.visible {
-      border-color: rgba(88, 101, 242, 0.8);
-    }
+    #border-preview.visible { border-color: rgba(88, 101, 242, 0.8); }
 
     .msg {
       background: var(--msg-bg, rgba(15, 15, 25, 0.82));
@@ -148,20 +168,18 @@
     }
 
     .msg.removing {
-  opacity: 0;
-  transform: translateY(-8px);
-  max-height: 0 !important;
-  padding-top: 0;
-  padding-bottom: 0;
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
-  transition:
-    opacity 0.35s ease,
-    transform 0.35s ease,
-    max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-    padding 0.4s ease,
-    margin 0.4s ease;
-}
+      opacity: 0;
+      transform: translateY(-8px);
+      max-height: 0 !important;
+      padding-top: 0; padding-bottom: 0;
+      margin-top: 0 !important; margin-bottom: 0 !important;
+      transition:
+        opacity 0.35s ease,
+        transform 0.35s ease,
+        max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+        padding 0.4s ease,
+        margin 0.4s ease;
+    }
 
     .msg-top {
       display: flex;
@@ -171,21 +189,10 @@
     }
 
     .avatar { width: 20px; height: 20px; border-radius: 50%; }
-
-    .author {
-      font-size: 12px;
-      font-weight: 600;
-      color: #5865F2;
-    }
-
-    .time {
-      font-size: 10px;
-      color: rgba(255,255,255,0.25);
-      margin-left: auto;
-    }
+    .author { font-size: 12px; font-weight: 600; color: #5865F2; }
+    .time { font-size: 10px; color: rgba(255,255,255,0.25); margin-left: auto; }
 
     .content {
-      flex: 1;
       display: flex;
       flex-direction: column;
       font-size: var(--font-size, 14px);
@@ -194,10 +201,230 @@
       word-break: break-word;
     }
 
+    body.media-mode .msg .content { flex: 1; min-height: 0; }
+
     .content img,
-    .content video {
+    .content video { flex: 1; min-height: 0; }
+
+    /* ── Loading card ── */
+    .loading-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 6px;
+      margin-top: 4px;
+    }
+
+    .loading-spinner {
+      width: 20px; height: 20px;
+      border: 2px solid rgba(88,101,242,0.3);
+      border-top-color: #5865F2;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text {
+      font-size: 12px;
+      color: rgba(255,255,255,0.45);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ── yt-dlp player ── */
+    .ytdlp-player {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .ytdlp-video-wrap {
       flex: 1;
       min-height: 0;
+      position: relative;
+      background: #000;
+    }
+
+    .ytdlp-video-wrap video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .ytdlp-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 8px;
+      background: rgba(0,0,0,0.6);
+      flex-shrink: 0;
+    }
+
+    .ytdlp-play-btn {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 13px;
+      cursor: pointer;
+      padding: 2px 4px;
+      opacity: 0.85;
+      transition: opacity 0.1s;
+      flex-shrink: 0;
+    }
+
+    .ytdlp-play-btn:hover { opacity: 1; }
+
+    .ytdlp-progress-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .ytdlp-progress {
+      flex: 1;
+      height: 3px;
+      appearance: none;
+      -webkit-appearance: none;
+      background: rgba(255,255,255,0.2);
+      border-radius: 2px;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .ytdlp-progress::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #5865F2;
+      cursor: pointer;
+    }
+
+    .ytdlp-time {
+      font-size: 10px;
+      color: rgba(255,255,255,0.5);
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      flex-shrink: 0;
+    }
+
+    .ytdlp-title {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      padding: 6px 10px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%);
+      font-size: 11px;
+      color: rgba(255,255,255,0.8);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .ytdlp-source {
+      font-size: 10px;
+      color: rgba(255,255,255,0.35);
+      margin-left: 4px;
+    }
+
+    /* ── Audio player ── */
+    .audio-player {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+      padding: 6px 8px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 6px;
+    }
+
+    .audio-play-btn {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: #5865F2;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 11px;
+      color: white;
+      transition: background 0.15s;
+    }
+
+    .audio-play-btn:hover { background: #4752c4; }
+
+    .audio-bar-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 0;
+    }
+
+    .audio-waveform {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      height: 20px;
+    }
+
+    .audio-waveform span {
+      display: inline-block;
+      width: 3px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.25);
+      transition: background 0.1s;
+    }
+
+    .audio-waveform span.played { background: #5865F2; }
+
+    .audio-progress {
+      width: 100%;
+      height: 3px;
+      appearance: none;
+      -webkit-appearance: none;
+      background: rgba(255,255,255,0.15);
+      border-radius: 2px;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .audio-progress::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #5865F2;
+      cursor: pointer;
+    }
+
+    .audio-time {
+      font-size: 10px;
+      color: rgba(255,255,255,0.35);
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+      min-width: 30px;
+      text-align: right;
+    }
+
+    .voice-badge {
+      font-size: 10px;
+      color: rgba(255,255,255,0.4);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 2px;
     }
   </style>
 </head>
@@ -206,12 +433,9 @@
   <div id="dragbar">
     <span style="flex: 1;">⠿ Discord Overlay</span>
     <span id="size-hint" style="
-      font-size: 10px;
-      color: rgba(255,255,255,0.5);
-      margin-left: 8px;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.15s;
+      font-size: 10px; color: rgba(255,255,255,0.5);
+      margin-left: 8px; pointer-events: none;
+      opacity: 0; transition: opacity 0.15s;
       font-variant-numeric: tabular-nums;
     "></span>
   </div>
@@ -223,20 +447,26 @@
 
   let soundEnabled = false
   let videoVolume = 0
-  let durationText = 8000
-  let durationGif = 8000
+  let durationText  = 8000
+  let durationGif   = 8000
   let durationVideo = 10000
+  let durationAudio = 15000
   let videoUntilEnd = false
+  let audioUntilEnd = false
 
   function esc(t) {
     return String(t)
-      .replace(/&/g,'&amp;')
-      .replace(/</g,'&lt;')
-      .replace(/>/g,'&gt;')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
   }
 
-  const dragbar = document.getElementById('dragbar')
-  const sizeHint = document.getElementById('size-hint')
+  function formatTime(s) {
+    if (!isFinite(s)) return '0:00'
+    const m = Math.floor(s / 60)
+    const sec = Math.floor(s % 60)
+    return `${m}:${sec.toString().padStart(2, '0')}`
+  }
+
+  const sizeHint     = document.getElementById('size-hint')
   const borderPreview = document.getElementById('border-preview')
 
   function updateClickThrough() {
@@ -245,7 +475,6 @@
   }
 
   document.addEventListener('mousemove', updateClickThrough)
-
   document.addEventListener('mouseleave', () => {
     updateClickThrough()
     borderPreview.classList.remove('visible')
@@ -253,13 +482,8 @@
   })
 
   ipcRenderer.on('dragbar-hover', (e, hovering) => {
-    if (hovering) {
-      borderPreview.classList.add('visible')
-      ipcRenderer.send('get-overlay-size')
-    } else {
-      borderPreview.classList.remove('visible')
-      sizeHint.style.opacity = '0'
-    }
+    if (hovering) { borderPreview.classList.add('visible'); ipcRenderer.send('get-overlay-size') }
+    else { borderPreview.classList.remove('visible'); sizeHint.style.opacity = '0' }
   })
 
   ipcRenderer.on('overlay-size', (e, { width, height }) => {
@@ -267,438 +491,455 @@
     sizeHint.style.opacity = '1'
   })
 
+  // ── Remove msg ──────────────────────────────────────────────────────────────
+
   function removeMsg(div) {
-  if (div._removing) return
-  div._removing = true
-  const h = div.getBoundingClientRect().height
-  div.style.maxHeight = h + 'px'
-  div.style.transition = [
-    'opacity 0.35s ease',
-    'transform 0.35s ease',
-    `max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1)`,
-    'padding 0.4s ease',
-    'margin 0.4s ease'
-  ].join(', ')
-  div.getBoundingClientRect()
-  div.classList.add('removing')
-  div.addEventListener('transitionend', (e) => {
-    if (e.propertyName !== 'max-height') return
-    div.remove()
-    updateClickThrough()
-  }, { once: true })
-}
+    if (div._removing) return
+    div._removing = true
+    if (div._audioEl) { try { div._audioEl.pause() } catch(e){} }
+    // Pause any video
+    const vid = div.querySelector('video')
+    if (vid) { try { vid.pause() } catch(e){} }
 
-  ipcRenderer.on('message', (e, msg) => {
-    const container = document.getElementById('messages')
-    const msgs = container.querySelectorAll('.msg')
-    if (msgs.length >= MAX) removeMsg(msgs[0])
+    const h = div.getBoundingClientRect().height
+    div.style.maxHeight = h + 'px'
+    div.style.transition = [
+      'opacity 0.35s ease', 'transform 0.35s ease',
+      'max-height 0.4s cubic-bezier(0.4,0,0.2,1)',
+      'padding 0.4s ease', 'margin 0.4s ease'
+    ].join(', ')
+    div.getBoundingClientRect()
+    div.classList.add('removing')
+    div.addEventListener('transitionend', (e) => {
+      if (e.propertyName !== 'max-height') return
+      div.remove()
+      updateClickThrough()
+      // Sync media-mode after removal
+      requestAnimationFrame(() => {
+        const remaining = document.querySelectorAll('.msg')
+        const lastIsMedia = remaining.length > 0 && remaining[remaining.length - 1].querySelector('img, video')
+        document.body.classList.toggle('media-mode', !!lastIsMedia)
+      })
+    }, { once: true })
+  }
 
-    const isMedia = !!msg.gifUrl
-    document.body.classList.toggle('media-mode', isMedia)
+  // ── Skip current media ───────────────────────────────────────────────────────
 
-    const div = document.createElement('div')
-    div.className = 'msg'
-
-    let mediaHtml = ''
-    if (msg.gifUrl) {
-      if (msg.gifIsVideo) {
-        const loopAttr = videoUntilEnd ? '' : 'loop'
-        const endedAttr = videoUntilEnd && msg.gifIsVideo
-  ? `onended="this.closest('.msg') && removeMsg(this.closest('.msg'))"`
-  : ''
-        mediaHtml = `<video
-          src="${msg.gifUrl}"
-          autoplay ${loopAttr} playsinline
-          style="width:100%; height:100%; border-radius:0; margin-top:0; display:block; object-fit:contain;"
-          onloadedmetadata="this.muted=${!soundEnabled}; this.volume=${videoVolume};"
-          ${endedAttr}
-        ></video>`
-      } else {
-        mediaHtml = `<img
-          src="${msg.gifUrl}"
-          style="width:100%; height:100%; border-radius:0; margin-top:0; display:block; object-fit:contain;"
-        >`
+  function skipCurrentMedia() {
+    const msgs = document.querySelectorAll('.msg')
+    // Skip le dernier message s'il contient un media
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      const m = msgs[i]
+      if (m.querySelector('video, img, .ytdlp-player, .audio-player')) {
+        removeMsg(m)
+        break
       }
     }
+  }
 
-    div.innerHTML = `
-      <div class="msg-top">
-        <img class="avatar" src="${msg.avatar}" onerror="this.style.display='none'">
-        <span class="author">${esc(msg.author)}</span>
-        <span class="time">${msg.time}</span>
-      </div>
-      <div class="content">
-        ${msg.gifUrl ? mediaHtml : esc(msg.content || '')}
+  ipcRenderer.on('skip-media', () => skipCurrentMedia())
+
+  // ── Click-to-pause sur la zone media ────────────────────────────────────────
+
+  function addMediaClickZone(div) {
+    const zone = document.createElement('div')
+    zone.className = 'media-click-zone'
+    zone.innerHTML = '<span class="pause-icon">⏸</span>'
+
+    zone.addEventListener('click', () => {
+      const vid = div.querySelector('video')
+      if (vid) {
+        if (vid.paused) {
+          vid.play()
+          zone.classList.remove('paused')
+          zone.querySelector('.pause-icon').textContent = '⏸'
+        } else {
+          vid.pause()
+          zone.classList.add('paused')
+          zone.querySelector('.pause-icon').textContent = '▶'
+        }
+      }
+    })
+
+    div.appendChild(zone)
+  }
+
+  // ── Skip button ─────────────────────────────────────────────────────────────
+
+  function addSkipBtn(div) {
+    const btn = document.createElement('button')
+    btn.className = 'skip-btn'
+    btn.textContent = '✕ skip'
+    btn.addEventListener('click', (e) => { e.stopPropagation(); removeMsg(div) })
+    div.appendChild(btn)
+  }
+
+  // ── yt-dlp player ───────────────────────────────────────────────────────────
+
+  // Map loadingUrl → div pour pouvoir remplacer le loading card
+  const loadingDivs = new Map()
+
+  function buildYtDlpPlayer(data, div) {
+    const { videoUrl, audioUrl, title, uploader, sourceUrl, duration } = data
+
+    const player = document.createElement('div')
+    player.className = 'ytdlp-player'
+
+    const videoWrap = document.createElement('div')
+    videoWrap.className = 'ytdlp-video-wrap'
+
+    const vid = document.createElement('video')
+    vid.src = videoUrl
+    vid.autoplay = true
+    vid.muted = !soundEnabled
+    vid.volume = videoVolume
+    vid.playsInline = true
+    vid.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;visibility:hidden;'
+
+    if (title) {
+      const titleEl = document.createElement('div')
+      titleEl.className = 'ytdlp-title'
+      const src = uploader ? `${uploader}` : (new URL(sourceUrl).hostname.replace('www.',''))
+      titleEl.innerHTML = `${esc(title)} <span class="ytdlp-source">${esc(src)}</span>`
+      videoWrap.appendChild(titleEl)
+    }
+
+    // Separate audio track if yt-dlp returned two URLs
+    let audioEl = null
+    let syncInterval = null
+    let started = false
+
+    if (audioUrl && audioUrl !== videoUrl) {
+      audioEl = new Audio(audioUrl)
+      audioEl.muted = !soundEnabled
+      audioEl.volume = videoVolume
+      audioEl.preload = 'auto'
+
+      // Bloquer l'autoplay — on lance manuellement quand les deux sont buffurisés
+      vid.autoplay = false
+      vid.preload = 'auto'
+
+      let vidReady = false, audReady = false
+
+      function startSync() {
+        clearInterval(syncInterval)
+        syncInterval = setInterval(() => {
+          if (vid.paused || audioEl.paused || !vid.duration) return
+          const drift = audioEl.currentTime - vid.currentTime
+          if (Math.abs(drift) > 1.5) {
+            // Drift trop grand (>1.5s) : seek direct, inévitable
+            audioEl.currentTime = vid.currentTime
+            audioEl.playbackRate = 1.0
+          } else if (Math.abs(drift) > 0.05) {
+            // Drift léger : ajuster la vitesse doucement pour rattraper sans saut
+            // drift positif = audio en avance → ralentir audio
+            // drift négatif = audio en retard → accélérer audio
+            audioEl.playbackRate = drift > 0 ? 0.95 : 1.05
+          } else {
+            // Sync OK, vitesse normale
+            audioEl.playbackRate = 1.0
+          }
+        }, 500)
+      }
+
+      function tryStart() {
+        if (started || !vidReady || !audReady) return
+        started = true
+        // Remettre les deux à zéro et lancer ensemble
+        vid.currentTime = 0
+        audioEl.currentTime = 0
+        vid.play().then(() => {
+          vid.style.visibility = 'visible'
+          audioEl.play().catch(() => {})
+          startSync()
+        }).catch(() => {})
+      }
+
+      // canplaythrough = assez de buffer pour lire sans freeze
+      vid.addEventListener('canplaythrough', () => { vidReady = true; tryStart() }, { once: true })
+      audioEl.addEventListener('canplaythrough', () => { audReady = true; tryStart() }, { once: true })
+
+      // Fallback : si canplaythrough ne se déclenche pas après 5s, on tente quand même
+      setTimeout(() => {
+        if (!started) { vidReady = true; audReady = true; tryStart() }
+      }, 5000)
+
+      vid.addEventListener('pause', () => {
+        audioEl.pause()
+        clearInterval(syncInterval)
+      })
+
+      vid.addEventListener('play', () => {
+        if (!started) return  // géré par tryStart
+        audioEl.currentTime = vid.currentTime
+        audioEl.play().catch(() => {})
+        startSync()
+      })
+
+      vid.addEventListener('seeked', () => {
+        audioEl.currentTime = vid.currentTime
+        if (!vid.paused) audioEl.play().catch(() => {})
+      })
+
+      vid.addEventListener('ended', () => {
+        audioEl.pause()
+        clearInterval(syncInterval)
+      })
+    }
+
+    // Si pas d'audio séparé, on cache quand même la vidéo et on l'affiche au premier play
+    if (!audioUrl || audioUrl === videoUrl) {
+      vid.style.visibility = 'hidden'
+      vid.addEventListener('playing', () => { vid.style.visibility = 'visible' }, { once: true })
+    }
+
+    videoWrap.appendChild(vid)
+
+    // Controls
+    const controls = document.createElement('div')
+    controls.className = 'ytdlp-controls'
+
+    const playBtn = document.createElement('button')
+    playBtn.className = 'ytdlp-play-btn'
+    playBtn.textContent = '⏸'
+
+    const progressWrap = document.createElement('div')
+    progressWrap.className = 'ytdlp-progress-wrap'
+
+    const progress = document.createElement('input')
+    progress.type = 'range'
+    progress.className = 'ytdlp-progress'
+    progress.min = 0; progress.max = 100; progress.step = 0.1; progress.value = 0
+
+    const timeEl = document.createElement('span')
+    timeEl.className = 'ytdlp-time'
+    timeEl.textContent = '0:00'
+
+    progressWrap.appendChild(progress)
+    controls.appendChild(playBtn)
+    controls.appendChild(progressWrap)
+    controls.appendChild(timeEl)
+
+    // Click-to-pause overlay
+    const clickZone = document.createElement('div')
+    clickZone.className = 'media-click-zone'
+    clickZone.innerHTML = '<span class="pause-icon">⏸</span>'
+    clickZone.addEventListener('click', () => {
+      if (vid.paused) { vid.play(); playBtn.textContent = '⏸'; clickZone.classList.remove('paused'); clickZone.querySelector('.pause-icon').textContent = '⏸' }
+      else { vid.pause(); playBtn.textContent = '▶'; clickZone.classList.add('paused'); clickZone.querySelector('.pause-icon').textContent = '▶' }
+    })
+    videoWrap.appendChild(clickZone)
+
+    playBtn.addEventListener('click', () => {
+      if (vid.paused) { vid.play(); playBtn.textContent = '⏸'; clickZone.classList.remove('paused') }
+      else { vid.pause(); playBtn.textContent = '▶'; clickZone.classList.add('paused') }
+    })
+
+    vid.addEventListener('timeupdate', () => {
+      if (!vid.duration) return
+      progress.value = (vid.currentTime / vid.duration) * 100
+      timeEl.textContent = `${formatTime(vid.currentTime)} / ${formatTime(vid.duration)}`
+    })
+
+    progress.addEventListener('input', () => {
+      if (vid.duration) {
+        vid.currentTime = (progress.value / 100) * vid.duration
+        if (audioEl) audioEl.currentTime = vid.currentTime
+      }
+    })
+
+    vid.addEventListener('ended', () => {
+      playBtn.textContent = '▶'
+      if (videoUntilEnd) removeMsg(div)
+    })
+
+    player.appendChild(videoWrap)
+    player.appendChild(controls)
+
+    // Store audio ref for volume updates
+    div._audioEl = audioEl
+
+    return { player, vid }
+  }
+
+  ipcRenderer.on('ytdlp-resolved', (e, data) => {
+    const div = loadingDivs.get(data.loadingUrl)
+    if (!div || div._removing) return
+    loadingDivs.delete(data.loadingUrl)
+
+    const contentEl = div.querySelector('.content')
+    if (!contentEl) return
+
+    // Remove loading card
+    const loadingCard = contentEl.querySelector('.loading-card')
+    if (loadingCard) loadingCard.remove()
+
+    if (!data.videoUrl) {
+      // Échec yt-dlp — affiche juste un lien
+      const errEl = document.createElement('div')
+      errEl.style.cssText = 'font-size:11px;color:rgba(255,255,255,0.35);margin-top:4px;'
+      errEl.textContent = '⚠ Impossible de charger la vidéo'
+      contentEl.appendChild(errEl)
+      return
+    }
+
+    document.body.classList.add('media-mode')
+
+    const { player, vid } = buildYtDlpPlayer(data, div)
+    contentEl.appendChild(player)
+
+    addSkipBtn(div)
+
+    // Durée
+    const dur = data.duration ? data.duration * 1000 : durationVideo
+    if (!videoUntilEnd) {
+      setTimeout(() => removeMsg(div), dur)
+    }
+  })
+
+  // ── Audio player ─────────────────────────────────────────────────────────────
+
+  function buildAudioPlayer(audioUrl, isVoice) {
+    const bars = Array.from({ length: 28 }, (_, i) => {
+      const h = 4 + Math.round(Math.abs(Math.sin(i * 0.7 + 1.2) * 14))
+      return `<span style="height:${h}px"></span>`
+    }).join('')
+
+    const wrap = document.createElement('div')
+    wrap.innerHTML = `
+      ${isVoice ? '<div class="voice-badge">🎙️ Message vocal</div>' : ''}
+      <div class="audio-player">
+        <button class="audio-play-btn" title="Lecture">▶</button>
+        <div class="audio-bar-wrap">
+          <div class="audio-waveform">${bars}</div>
+          <input type="range" class="audio-progress" value="0" min="0" max="100" step="0.1">
+        </div>
+        <span class="audio-time">0:00</span>
       </div>
     `
 
-    container.appendChild(div)
-    updateClickThrough()
+    const audio     = new Audio(audioUrl)
+    const btn       = wrap.querySelector('.audio-play-btn')
+    const progress  = wrap.querySelector('.audio-progress')
+    const timeEl    = wrap.querySelector('.audio-time')
+    const waveSpans = wrap.querySelectorAll('.audio-waveform span')
 
-    let type = 'text'
-    if (msg.gifUrl) type = msg.gifIsVideo ? 'video' : 'gif'
+    audio.volume = soundEnabled ? videoVolume : 0
 
-    if (msg.gifIsVideo && videoUntilEnd) {
-    } else {
-      const duration = type === 'video' ? durationVideo
-                      : type === 'gif'   ? durationGif
-                      : durationText
-
-      setTimeout(() => {
-        removeMsg(div)
-        requestAnimationFrame(() => {
-          const remaining = container.querySelectorAll('.msg')
-          const lastIsMedia = remaining.length > 0 && remaining[remaining.length - 1].querySelector('img, video')
-          document.body.classList.toggle('media-mode', !!lastIsMedia)
-        })
-      }, duration)
+    function updateWave() {
+      const pct = audio.duration ? audio.currentTime / audio.duration : 0
+      const played = Math.round(pct * waveSpans.length)
+      waveSpans.forEach((s, i) => s.classList.toggle('played', i < played))
     }
-  })
 
-  ipcRenderer.on('set-fontsize', (e, size) => {
-    document.documentElement.style.setProperty('--font-size', size + 'px')
-  })
-
-  ipcRenderer.on('set-volume', (e, enabled, vol) => {
-    soundEnabled = enabled
-    videoVolume = enabled ? vol : 0
-    document.querySelectorAll('video').forEach(v => {
-      v.muted = !enabled
-      v.volume = videoVolume
+    audio.addEventListener('timeupdate', () => {
+      if (!audio.duration) return
+      progress.value = (audio.currentTime / audio.duration) * 100
+      timeEl.textContent = formatTime(audio.currentTime)
+      updateWave()
     })
-  })
 
-  ipcRenderer.on('set-overlay-bg', (e, color) => {
-    document.documentElement.style.setProperty('--msg-bg', color)
-  })
+    audio.addEventListener('loadedmetadata', () => {
+      timeEl.textContent = formatTime(audio.duration)
+    })
 
-  ipcRenderer.on('set-window-opacity', (e, val) => {
-    document.documentElement.style.setProperty('--win-opacity', val)
-  })
+    audio.addEventListener('ended', () => {
+      btn.textContent = '▶'
+      progress.value = 0
+      timeEl.textContent = formatTime(audio.duration || 0)
+      waveSpans.forEach(s => s.classList.remove('played'))
+      if (audioUntilEnd) {
+        const msgDiv = wrap.closest('.msg')
+        if (msgDiv) removeMsg(msgDiv)
+      }
+    })
 
-  ipcRenderer.on('set-durations', (e, d) => {
-    durationText   = d.durationText
-    durationGif    = d.durationGif
-    durationVideo  = d.durationVideo
-    videoUntilEnd  = d.videoUntilEnd
-  })
+    btn.addEventListener('click', () => {
+      if (audio.paused) { audio.play(); btn.textContent = '⏸' }
+      else              { audio.pause(); btn.textContent = '▶' }
+    })
 
-  ipcRenderer.on('set-dragbar-hidden', (e, hidden) => {
-    document.body.classList.toggle('dragbar-hidden', !!hidden)
-  })
+    progress.addEventListener('input', () => {
+      if (audio.duration) { audio.currentTime = (progress.value / 100) * audio.duration; updateWave() }
+    })
 
-  ipcRenderer.send('get-settings')
-  ipcRenderer.on('load-settings', (e, s) => {
-    if (s.fontSize)   document.documentElement.style.setProperty('--font-size', s.fontSize + 'px')
-    if (s.overlayBg)  document.documentElement.style.setProperty('--msg-bg', s.overlayBg)
-    if (s.opacity !== undefined) document.documentElement.style.setProperty('--win-opacity', s.opacity)
-    soundEnabled = s.soundEnabled || false
-    videoVolume  = soundEnabled ? (s.volume || 0.8) : 0
-    if (s.durationText !== undefined)  durationText  = s.durationText
-    if (s.durationGif !== undefined)   durationGif   = s.durationGif
-    if (s.durationVideo !== undefined) durationVideo = s.durationVideo
-    if (s.videoUntilEnd !== undefined) videoUntilEnd = s.videoUntilEnd
-    if (s.dragbarHidden !== undefined) document.body.classList.toggle('dragbar-hidden', !!s.dragbarHidden)
-  })
-  </script>
-</body>
-=======
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    body {
-      background: transparent;
-      font-family: 'Segoe UI', sans-serif;
-      overflow: hidden;
-      height: 100vh;
-    }
-
-    #dragbar {
-      height: 20px;
-      background: rgba(15, 15, 25, var(--win-opacity, 0.7));
-      -webkit-app-region: drag;
-      border-radius: 8px 8px 0 0;
-      display: flex;
-      align-items: center;
-      padding: 0 8px;
-      cursor: move;
-      transition: background 0.2s, height 0.2s;
-      position: relative;
-      user-select: none;
-      -webkit-user-select: none;
-      z-index: 10;
-    }
-
-    #dragbar:hover {
-      background: rgba(88, 101, 242, var(--win-opacity, 0.5));
-      height: 24px;
-    }
-
-    body.dragbar-hidden #dragbar {
-      height: 4px;
-      background: transparent;
-      overflow: hidden;
-    }
-
-    body.dragbar-hidden #dragbar:hover {
-      height: 4px;
-      background: transparent;
-    }
-
-    body.dragbar-hidden #dragbar span {
-      display: none;
-    }
-
-    #dragbar span {
-      font-size: 10px;
-      color: rgba(255,255,255,0.4);
-      pointer-events: none;
-    }
-
-    #messages {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      padding: 8px;
-      height: calc(100vh - 20px);
-      overflow: hidden;
-      justify-content: flex-start;
-    }
-
-    #messages .msg:last-child {
-      flex: 1;
-      min-height: 0;
-    }
-
-    body.media-mode #messages {
-      padding: 0;
-      gap: 0;
-    }
-
-    body.media-mode .msg {
-      border-left: none;
-      border-radius: 0;
-      padding: 0;
-      flex: 1;
-      min-height: 0;
-    }
-
-    body.media-mode .msg-top {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      padding: 6px 10px;
-      background: linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, transparent 100%);
-      margin-bottom: 0;
-      z-index: 2;
-      height: 32px;
-    }
-
-    body.media-mode .content {
-      flex: 1;
-      min-height: 0;
-      padding-top: 32px;
-    }
-
-    body.media-mode .msg {
-      position: relative;
-    }
-
-    body.media-mode .content img,
-    body.media-mode .content video {
-      width: 100%;
-      height: 100%;
-      max-height: none;
-      object-fit: contain;
-      border-radius: 0;
-      margin-top: 0;
-      display: block;
-    }
-
-    #border-preview {
-      position: fixed;
-      inset: 0;
-      border: 2px solid rgba(88, 101, 242, 0);
-      border-radius: 8px;
-      pointer-events: none;
-      transition: border-color 0.15s;
-      z-index: 9999;
-    }
-
-    #border-preview.visible {
-      border-color: rgba(88, 101, 242, 0.8);
-    }
-
-    .msg {
-      background: var(--msg-bg, rgba(15, 15, 25, 0.82));
-      border-left: 3px solid #5865F2;
-      border-radius: 6px;
-      padding: 8px 12px;
-      animation: slideIn 0.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-      transition: none;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
-
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateY(12px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    .msg.removing {
-  opacity: 0;
-  transform: translateY(-8px);
-  max-height: 0 !important;
-  padding-top: 0;
-  padding-bottom: 0;
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
-  transition:
-    opacity 0.35s ease,
-    transform 0.35s ease,
-    max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-    padding 0.4s ease,
-    margin 0.4s ease;
-}
-
-    .msg-top {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      margin-bottom: 4px;
-    }
-
-    .avatar { width: 20px; height: 20px; border-radius: 50%; }
-
-    .author {
-      font-size: 12px;
-      font-weight: 600;
-      color: #5865F2;
-    }
-
-    .time {
-      font-size: 10px;
-      color: rgba(255,255,255,0.25);
-      margin-left: auto;
-    }
-
-    .content {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      font-size: var(--font-size, 14px);
-      color: rgba(255,255,255,0.9);
-      line-height: 1.4;
-      word-break: break-word;
-    }
-
-    .content img,
-    .content video {
-      flex: 1;
-      min-height: 0;
-    }
-  </style>
-</head>
-<body>
-  <div id="border-preview"></div>
-  <div id="dragbar">
-    <span style="flex: 1;">⠿ Discord Overlay</span>
-    <span id="size-hint" style="
-      font-size: 10px;
-      color: rgba(255,255,255,0.5);
-      margin-left: 8px;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.15s;
-      font-variant-numeric: tabular-nums;
-    "></span>
-  </div>
-  <div id="messages"></div>
-
-  <script>
-  const { ipcRenderer } = require('electron')
-  const MAX = 6
-
-  let soundEnabled = false
-  let videoVolume = 0
-  let durationText = 8000
-  let durationGif = 8000
-  let durationVideo = 10000
-  let videoUntilEnd = false
-
-  function esc(t) {
-    return String(t)
-      .replace(/&/g,'&amp;')
-      .replace(/</g,'&lt;')
-      .replace(/>/g,'&gt;')
+    wrap._audio = audio
+    return wrap
   }
 
-  const dragbar = document.getElementById('dragbar')
-  const sizeHint = document.getElementById('size-hint')
-  const borderPreview = document.getElementById('border-preview')
-
-  function updateClickThrough() {
-    const hasMessages = document.querySelectorAll('.msg').length > 0
-    ipcRenderer.send('set-click-through', !hasMessages)
-  }
-
-  document.addEventListener('mousemove', updateClickThrough)
-
-  document.addEventListener('mouseleave', () => {
-    updateClickThrough()
-    borderPreview.classList.remove('visible')
-    sizeHint.style.opacity = '0'
-  })
-
-  ipcRenderer.on('dragbar-hover', (e, hovering) => {
-    if (hovering) {
-      borderPreview.classList.add('visible')
-      ipcRenderer.send('get-overlay-size')
-    } else {
-      borderPreview.classList.remove('visible')
-      sizeHint.style.opacity = '0'
-    }
-  })
-
-  ipcRenderer.on('overlay-size', (e, { width, height }) => {
-    sizeHint.textContent = `${width} × ${height}`
-    sizeHint.style.opacity = '1'
-  })
-
-  function removeMsg(div) {
-  if (div._removing) return
-  div._removing = true
-  const h = div.getBoundingClientRect().height
-  div.style.maxHeight = h + 'px'
-  div.style.transition = [
-    'opacity 0.35s ease',
-    'transform 0.35s ease',
-    `max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1)`,
-    'padding 0.4s ease',
-    'margin 0.4s ease'
-  ].join(', ')
-  div.getBoundingClientRect()
-  div.classList.add('removing')
-  div.addEventListener('transitionend', (e) => {
-    if (e.propertyName !== 'max-height') return
-    div.remove()
-    updateClickThrough()
-  }, { once: true })
-}
+  // ── Message handler ──────────────────────────────────────────────────────────
 
   ipcRenderer.on('message', (e, msg) => {
     const container = document.getElementById('messages')
     const msgs = container.querySelectorAll('.msg')
     if (msgs.length >= MAX) removeMsg(msgs[0])
 
-    const isMedia = !!msg.gifUrl
-    document.body.classList.toggle('media-mode', isMedia)
+    // ── YouTube WebContentsView ─────────────────────────────────────────────
+    if (msg.youtubeView) {
+      document.body.classList.add('media-mode')
+
+      const div = document.createElement('div')
+      div.className = 'msg'
+      div.innerHTML = `
+        <div class="msg-top" style="position:relative;z-index:2;">
+          <img class="avatar" src="${msg.avatar}" onerror="this.style.display='none'">
+          <span class="author">${esc(msg.author)}</span>
+          <span class="time">${msg.time}</span>
+        </div>
+        <div class="content yt-view-slot" style="flex:1;min-height:0;background:#000;position:relative;">
+        </div>
+      `
+
+      addSkipBtn(div)
+      container.appendChild(div)
+      updateClickThrough()
+
+      // Calculer la position/taille du slot pour la WebContentsView
+      function placeYtView() {
+        const slot = div.querySelector('.yt-view-slot')
+        if (!slot) return
+        const r = slot.getBoundingClientRect()
+        ipcRenderer.send('yt-view-create', {
+          videoId: msg.youtubeView,
+          x: Math.round(r.left),
+          y: Math.round(r.top),
+          width: Math.round(r.width),
+          height: Math.round(r.height)
+        })
+      }
+
+      // Attendre que le DOM soit positionné
+      requestAnimationFrame(() => requestAnimationFrame(placeYtView))
+
+      // Observer les resize de la fenêtre pour recaler la vue
+      const resizeObs = new ResizeObserver(() => {
+        const slot = div.querySelector('.yt-view-slot')
+        if (!slot) return
+        const r = slot.getBoundingClientRect()
+        ipcRenderer.send('yt-view-resize', {
+          x: Math.round(r.left), y: Math.round(r.top),
+          width: Math.round(r.width), height: Math.round(r.height)
+        })
+      })
+      resizeObs.observe(div)
+
+      // Nettoyage : détruire la vue quand le message disparaît
+      const origRemove = div.remove.bind(div)
+      div.remove = () => {
+        resizeObs.disconnect()
+        ipcRenderer.send('yt-view-destroy')
+        origRemove()
+      }
+
+      if (!videoUntilEnd) setTimeout(() => removeMsg(div), durationVideo)
+      return
+    }
+
+    const isMedia   = !!msg.gifUrl
+    const isAudio   = !!msg.audioUrl && !msg.gifUrl
+    const isLoading = !!msg.loading
+
+    if (isMedia) document.body.classList.add('media-mode')
 
     const div = document.createElement('div')
     div.className = 'msg'
@@ -707,22 +948,20 @@
     if (msg.gifUrl) {
       if (msg.gifIsVideo) {
         const isLooping = !!msg.gifIsLooping
-        const loopAttr = (isLooping || !videoUntilEnd) ? 'loop' : ''
-        const endedAttr = (!isLooping && videoUntilEnd)
-          ? `onended="this.closest('.msg') && removeMsg(this.closest('.msg'))"`
+        const loopAttr  = (isLooping || !videoUntilEnd) ? 'loop' : ''
+        const endedCb   = (!isLooping && videoUntilEnd)
+          ? `onended="(function(v){const m=v.closest('.msg');if(m)removeMsg(m)})(this)"`
           : ''
         mediaHtml = `<video
           src="${msg.gifUrl}"
           autoplay ${loopAttr} playsinline
-          style="width:100%; height:100%; border-radius:0; margin-top:0; display:block; object-fit:contain;"
-          onloadedmetadata="this.muted=${!soundEnabled}; this.volume=${videoVolume};"
-          ${endedAttr}
+          style="width:100%;height:100%;border-radius:0;margin-top:0;display:block;object-fit:contain;"
+          onloadedmetadata="this.muted=${!soundEnabled};this.volume=${videoVolume};"
+          ${endedCb}
         ></video>`
       } else {
-        mediaHtml = `<img
-          src="${msg.gifUrl}"
-          style="width:100%; height:100%; border-radius:0; margin-top:0; display:block; object-fit:contain;"
-        >`
+        mediaHtml = `<img src="${msg.gifUrl}"
+          style="width:100%;height:100%;border-radius:0;margin-top:0;display:block;object-fit:contain;">`
       }
     }
 
@@ -733,32 +972,73 @@
         <span class="time">${msg.time}</span>
       </div>
       <div class="content">
-        ${msg.gifUrl ? mediaHtml : esc(msg.content || '')}
+        ${msg.gifUrl ? mediaHtml : (isAudio || isLoading ? '' : esc(msg.content || ''))}
       </div>
     `
+
+    // Audio player
+    if (isAudio) {
+      const contentEl = div.querySelector('.content')
+      if (msg.content) {
+        const textEl = document.createElement('div')
+        textEl.textContent = msg.content
+        contentEl.appendChild(textEl)
+      }
+      const player = buildAudioPlayer(msg.audioUrl, msg.isVoiceMessage)
+      contentEl.appendChild(player)
+      div._audioEl = player._audio
+
+      player._audio.addEventListener('canplay', () => {
+        player._audio.play().then(() => {
+          const btn = player.querySelector('.audio-play-btn')
+          if (btn) btn.textContent = '⏸'
+        }).catch(() => {})
+      }, { once: true })
+    }
+
+    // Loading card (yt-dlp en cours)
+    if (isLoading) {
+      const contentEl = div.querySelector('.content')
+      if (msg.content) {
+        const textEl = document.createElement('div')
+        textEl.textContent = msg.content
+        contentEl.appendChild(textEl)
+      }
+      const card = document.createElement('div')
+      card.className = 'loading-card'
+      const domain = (() => { try { return new URL(msg.loadingUrl).hostname.replace('www.','') } catch { return msg.loadingUrl } })()
+      card.innerHTML = `<div class="loading-spinner"></div><span class="loading-text">Chargement ${esc(domain)}…</span>`
+      contentEl.appendChild(card)
+      loadingDivs.set(msg.loadingUrl, div)
+    }
+
+    // Click-to-pause + skip btn pour les medias
+    if (isMedia && msg.gifIsVideo) {
+      addMediaClickZone(div)
+      addSkipBtn(div)
+    }
 
     container.appendChild(div)
     updateClickThrough()
 
-    let type = 'text'
-    if (msg.gifUrl) type = msg.gifIsVideo ? 'video' : 'gif'
+    // Timer
+    if (!isLoading) {
+      let type = 'text'
+      if (msg.gifUrl)            type = msg.gifIsVideo ? 'video' : 'gif'
+      if (msg.audioUrl && !msg.gifUrl) type = 'audio'
 
-    if (msg.gifIsVideo && videoUntilEnd && !msg.gifIsLooping) {
-    } else {
-      const duration = type === 'video' ? durationVideo
-                      : type === 'gif'   ? durationGif
-                      : durationText
-
-      setTimeout(() => {
-        removeMsg(div)
-        requestAnimationFrame(() => {
-          const remaining = container.querySelectorAll('.msg')
-          const lastIsMedia = remaining.length > 0 && remaining[remaining.length - 1].querySelector('img, video')
-          document.body.classList.toggle('media-mode', !!lastIsMedia)
-        })
-      }, duration)
+      const skipTimer = (msg.gifIsVideo && videoUntilEnd && !msg.gifIsLooping) || (type === 'audio' && audioUntilEnd)
+      if (!skipTimer) {
+        const duration = type === 'video' ? durationVideo
+                        : type === 'gif'   ? durationGif
+                        : type === 'audio' ? durationAudio
+                        : durationText
+        setTimeout(() => removeMsg(div), duration)
+      }
     }
   })
+
+  // ── IPC settings ─────────────────────────────────────────────────────────────
 
   ipcRenderer.on('set-fontsize', (e, size) => {
     document.documentElement.style.setProperty('--font-size', size + 'px')
@@ -766,10 +1046,10 @@
 
   ipcRenderer.on('set-volume', (e, enabled, vol) => {
     soundEnabled = enabled
-    videoVolume = enabled ? vol : 0
-    document.querySelectorAll('video').forEach(v => {
-      v.muted = !enabled
-      v.volume = videoVolume
+    videoVolume  = enabled ? vol : 0
+    document.querySelectorAll('video').forEach(v => { v.muted = !enabled; v.volume = videoVolume })
+    document.querySelectorAll('.msg').forEach(m => {
+      if (m._audioEl) m._audioEl.volume = videoVolume
     })
   })
 
@@ -782,10 +1062,12 @@
   })
 
   ipcRenderer.on('set-durations', (e, d) => {
-    durationText   = d.durationText
-    durationGif    = d.durationGif
-    durationVideo  = d.durationVideo
-    videoUntilEnd  = d.videoUntilEnd
+    durationText  = d.durationText
+    durationGif   = d.durationGif
+    durationVideo = d.durationVideo
+    durationAudio = d.durationAudio ?? 15000
+    videoUntilEnd = d.videoUntilEnd
+    audioUntilEnd = d.audioUntilEnd ?? false
   })
 
   ipcRenderer.on('set-dragbar-hidden', (e, hidden) => {
@@ -799,13 +1081,14 @@
     if (s.opacity !== undefined) document.documentElement.style.setProperty('--win-opacity', s.opacity)
     soundEnabled = s.soundEnabled || false
     videoVolume  = soundEnabled ? (s.volume || 0.8) : 0
-    if (s.durationText !== undefined)  durationText  = s.durationText
-    if (s.durationGif !== undefined)   durationGif   = s.durationGif
+    if (s.durationText  !== undefined) durationText  = s.durationText
+    if (s.durationGif   !== undefined) durationGif   = s.durationGif
     if (s.durationVideo !== undefined) durationVideo = s.durationVideo
+    if (s.durationAudio !== undefined) durationAudio = s.durationAudio
     if (s.videoUntilEnd !== undefined) videoUntilEnd = s.videoUntilEnd
+    if (s.audioUntilEnd !== undefined) audioUntilEnd = s.audioUntilEnd
     if (s.dragbarHidden !== undefined) document.body.classList.toggle('dragbar-hidden', !!s.dragbarHidden)
   })
   </script>
 </body>
->>>>>>> 9bc623a (v1.0.0)
 </html>

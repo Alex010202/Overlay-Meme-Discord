@@ -57,7 +57,9 @@ function loadSettings() {
     ytTimeout: 30000,
     ytExtraArgs: '',
     ytSubtitles: false,
-    ytReencode: false
+    ytReencode: false,
+    ytQuality: 'hd1080',
+    ytNoFullscreen: true
   }
 }
 
@@ -702,17 +704,18 @@ ipcMain.on('yt-view-create', (e, { videoId, x, y, width, height }) => {
       `).catch(() => {})
     })
 
+    const noFs = settings.ytNoFullscreen !== false  // true par défaut
     ytView.webContents.executeJavaScript(`
       (function() {
+        ${noFs ? `
+        // Bloquer requestFullscreen
         const origRFS = Element.prototype.requestFullscreen
-        Element.prototype.requestFullscreen = function() {
-          return Promise.resolve()
-        }
+        Element.prototype.requestFullscreen = function() { return Promise.resolve() }
+        // Sortir si plein écran quand même
         document.addEventListener('fullscreenchange', () => {
-          if (document.fullscreenElement) {
-            document.exitFullscreen().catch(() => {})
-          }
+          if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
         })
+        ` : ''}
 
         const run = () => {
           const player = document.getElementById('movie_player')
@@ -740,7 +743,7 @@ ipcMain.on('yt-view-create', (e, { videoId, x, y, width, height }) => {
             '#below, #comments, ytd-miniplayer { display:none!important }' +
             'tp-yt-paper-dialog, ytd-popup-container { display:none!important }' +
             'html, body { overflow:hidden!important; margin:0!important; padding:0!important }' +
-            '.ytp-fullscreen-button { display:none!important }'
+            ${noFs ? `'.ytp-fullscreen-button { display:none!important }'` : `''`}
           document.head.appendChild(style)
 
           return true
@@ -780,12 +783,45 @@ ipcMain.on('set-yt-player-settings', (e, patch) => {
     ytView.webContents.executeJavaScript(`
       (function() {
         const player = document.getElementById('movie_player')
-        if (player && player.setPlaybackQuality) {
+        if (player && player.setPlaybackQualityRange) {
+          player.setPlaybackQualityRange('${patch.ytQuality}', '${patch.ytQuality}')
+        } else if (player && player.setPlaybackQuality) {
           player.setPlaybackQuality('${patch.ytQuality}')
         }
       })()
     `).catch(() => {})
   }
+})
+
+ipcMain.on('set-yt-live-volume', (e, pct) => {
+  if (!ytView || ytView.webContents.isDestroyed()) return
+  const vol = Math.max(0, Math.min(100, pct))
+  ytView.webContents.executeJavaScript(`
+    (function() {
+      const player = document.getElementById('movie_player')
+      const video  = document.querySelector('video.html5-main-video')
+      if (player && player.setVolume) player.setVolume(${vol})
+      if (player && ${vol} > 0) { if (player.unMute) player.unMute() }
+      if (player && ${vol} === 0) { if (player.mute) player.mute() }
+      if (video) { video.volume = ${vol / 100}; video.muted = ${vol === 0} }
+    })()
+  `).catch(() => {})
+})
+
+ipcMain.on('set-yt-live-quality', (e, quality) => {
+  settings = saveSettings({ ytQuality: quality })
+  if (!ytView || ytView.webContents.isDestroyed()) return
+  ytView.webContents.executeJavaScript(`
+    (function() {
+      const player = document.getElementById('movie_player')
+      if (!player) return
+      if (player.setPlaybackQualityRange) {
+        player.setPlaybackQualityRange('${quality}', '${quality}')
+      } else if (player.setPlaybackQuality) {
+        player.setPlaybackQuality('${quality}')
+      }
+    })()
+  `).catch(() => {})
 })
 
 // ─── Profiles ─────────────────────────────────────────────────────────────────
