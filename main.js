@@ -99,8 +99,6 @@ let discordClient
 let currentChannelId = settings.channelId
 let overlayNormalBounds = null
 
-// ─── yt-dlp ───────────────────────────────────────────────────────────────────
-
 function findYtDlp() {
   const possiblePaths = [
     path.join(process.resourcesPath, 'yt-dlp.exe'),
@@ -1050,7 +1048,6 @@ app.whenReady().then(() => {
   startBot(currentChannelId)
   registerHotkeys()
   
-  // Vérification au lancement (après 2 secondes)
   setTimeout(() => {
     checkForUpdatesManually()
   }, 2000)
