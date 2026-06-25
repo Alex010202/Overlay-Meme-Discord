@@ -8,6 +8,22 @@ const https = require('https')
 require('dotenv').config({ path: path.join(__dirname, 'token.env') })
 Menu.setApplicationMenu(null)
 
+
+function checkForUpdatesManually() {
+  console.log('🔍 Vérification des mises à jour...')
+  if (settingsWindow && !settingsWindow.isDestroyed()) {
+    sendUpdateStatus('checking')
+  }
+  autoUpdater.checkForUpdates()
+    .catch((err) => {
+      console.error('Erreur vérification:', err)
+      if (settingsWindow && !settingsWindow.isDestroyed()) {
+        sendUpdateStatus('error', { message: err?.message || 'Erreur de vérification' })
+      }
+    })
+}
+
+
 autoUpdater.autoDownload = true
 autoUpdater.autoInstallOnAppQuit = true
 
@@ -657,6 +673,10 @@ function startBot(channelId) {
 }
 
 
+ipcMain.on('check-for-updates', () => {
+  checkForUpdatesManually()
+})
+
 ipcMain.on('set-channel', (e, channelId) => {
   settings = saveSettings({ channelId })
   currentChannelId = channelId
@@ -790,14 +810,6 @@ ipcMain.on('delete-profile', (e, { name }) => {
   delete profiles[name]
   saveProfiles(profiles)
   if (settingsWindow) settingsWindow.webContents.send('load-profiles', profiles)
-})
-
-ipcMain.on('check-for-updates', () => {
-  autoUpdater.checkForUpdates().catch((err) => {
-    if (settingsWindow && !settingsWindow.isDestroyed()) {
-      settingsWindow.webContents.send('update-status', { status: 'error', message: err?.message || 'Erreur réseau' })
-    }
-  })
 })
 
 ipcMain.on('get-overlay-size', (e) => {
@@ -1037,7 +1049,11 @@ app.whenReady().then(() => {
   createSettingsWindow()
   startBot(currentChannelId)
   registerHotkeys()
-  autoUpdater.checkForUpdates().catch(() => {})
+  
+  // Vérification au lancement (après 2 secondes)
+  setTimeout(() => {
+    checkForUpdatesManually()
+  }, 2000)
 
   setInterval(() => {
     if (!overlayWindow || overlayWindow.isDestroyed()) return
