@@ -527,10 +527,16 @@
 
   function skipCurrentMedia() {
     const msgs = document.querySelectorAll('.msg')
-    // Skip le dernier message s'il contient un media
+    // Skip le dernier message média (vidéo, img, audio, yt-dlp, YouTube natif,
+    // ou un yt-dlp encore en chargement). On se base sur la classe .media-msg
+    // posée à la création, car certains medias (vue YouTube native via
+    // BrowserView, ou un yt-dlp pas encore résolu) n'ont pas encore d'élément
+    // <video>/<img> dans le DOM au moment du skip — l'ancien sélecteur les
+    // ratait, ce qui faisait supprimer un AUTRE message à la place pendant
+    // que la vidéo/le son réel continuait.
     for (let i = msgs.length - 1; i >= 0; i--) {
       const m = msgs[i]
-      if (m.querySelector('video, img, .ytdlp-player, .audio-player')) {
+      if (m.classList.contains('media-msg') && !m._removing) {
         removeMsg(m)
         break
       }
@@ -775,7 +781,8 @@
     if (loadingCard) loadingCard.remove()
 
     if (!data.videoUrl) {
-      // Échec yt-dlp — affiche juste un lien
+      // Échec yt-dlp — affiche juste un lien, plus rien à "media-skip"
+      div.classList.remove('media-msg')
       const errEl = document.createElement('div')
       errEl.style.cssText = 'font-size:11px;color:rgba(255,255,255,0.35);margin-top:4px;'
       errEl.textContent = '⚠ Impossible de charger la vidéo'
@@ -787,8 +794,6 @@
 
     const { player, vid } = buildYtDlpPlayer(data, div)
     contentEl.appendChild(player)
-
-    addSkipBtn(div)
 
     // Durée
     const dur = data.duration ? data.duration * 1000 : durationVideo
@@ -879,7 +884,7 @@
       document.body.classList.add('media-mode')
 
       const div = document.createElement('div')
-      div.className = 'msg'
+      div.className = 'msg media-msg'
       div.innerHTML = `
         <div class="msg-top" style="position:relative;z-index:2;">
           <img class="avatar" src="${msg.avatar}" onerror="this.style.display='none'">
@@ -942,7 +947,10 @@
     if (isMedia) document.body.classList.add('media-mode')
 
     const div = document.createElement('div')
-    div.className = 'msg'
+    // isLoading = yt-dlp en cours de résolution → deviendra une vidéo,
+    // on le marque déjà media-msg pour que le skip puisse le cibler
+    // pendant le chargement (sinon il ratait un autre message à la place).
+    div.className = 'msg' + ((isMedia || isAudio || isLoading) ? ' media-msg' : '')
 
     let mediaHtml = ''
     if (msg.gifUrl) {
@@ -1012,11 +1020,9 @@
       loadingDivs.set(msg.loadingUrl, div)
     }
 
-    // Click-to-pause + skip btn pour les medias
-    if (isMedia && msg.gifIsVideo) {
-      addMediaClickZone(div)
-      addSkipBtn(div)
-    }
+    // Click-to-pause (vidéo uniquement) + skip btn (tout type de média)
+    if (isMedia && msg.gifIsVideo) addMediaClickZone(div)
+    if (isMedia || isAudio || isLoading) addSkipBtn(div)
 
     container.appendChild(div)
     updateClickThrough()

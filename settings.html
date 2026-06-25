@@ -57,6 +57,10 @@
     input[type="text"] { flex: 1; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 9px 12px; color: var(--text); font-size: 13px; outline: none; transition: border 0.15s; }
     input[type="text"]:focus { border-color: var(--accent); }
 
+    select { flex: 1; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 9px 12px; color: var(--text); font-size: 13px; outline: none; transition: border 0.15s; cursor: pointer; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%236b6f7a'/></svg>"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 30px; }
+    select:focus { border-color: var(--accent); }
+    select option { background: var(--panel); color: var(--text); }
+
     .btn { background: var(--accent); color: white; border: none; border-radius: 6px; padding: 9px 16px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s; white-space: nowrap; }
     .btn:hover { background: var(--accent2); }
     .btn.sm { padding: 6px 12px; font-size: 12px; }
@@ -353,6 +357,23 @@
 
           <hr class="divider">
 
+          <span class="field-label">Navigateur simulé (User-Agent)</span>
+          <select id="yt-ua-preset" onchange="onYtUaPresetChange()">
+            <option value="chrome-win">Chrome — Windows (recommandé)</option>
+            <option value="chrome-mac">Chrome — macOS</option>
+            <option value="firefox-win">Firefox — Windows</option>
+            <option value="edge-win">Edge — Windows</option>
+            <option value="safari-mac">Safari — macOS</option>
+            <option value="chrome-linux">Chrome — Linux</option>
+            <option value="custom">Personnalisé…</option>
+          </select>
+          <div class="hint">Change ce que YouTube voit comme navigateur. Utile si une vidéo refuse de se charger ou affiche une page différente. Chrome Windows fonctionne dans la grande majorité des cas.</div>
+          <div class="input-row" id="yt-ua-custom-row" style="display:none;margin-top:8px;">
+            <input type="text" id="yt-ua-custom" placeholder="Mozilla/5.0 (...)" onchange="saveYtUserAgent()">
+          </div>
+
+          <hr class="divider">
+
           <div class="toggle-row">
             <div>
               <div class="toggle-text">Désactiver le plein écran</div>
@@ -555,6 +576,11 @@
       if (s.ytNoFullscreen !== undefined) {
         document.getElementById('yt-no-fullscreen').checked = !!s.ytNoFullscreen
       }
+      if (s.ytUaPreset) {
+        document.getElementById('yt-ua-preset').value = s.ytUaPreset
+        document.getElementById('yt-ua-custom-row').style.display = s.ytUaPreset === 'custom' ? '' : 'none'
+      }
+      if (s.ytUaCustom !== undefined) document.getElementById('yt-ua-custom').value = s.ytUaCustom
     })
 
     ipcRenderer.on('status', (e, data) => {
@@ -767,6 +793,18 @@
       const q = btn.dataset.q
       ipcRenderer.send('set-yt-live-quality', q)
       saveYtPlayerSettings()
+    }
+
+    function onYtUaPresetChange() {
+      const preset = document.getElementById('yt-ua-preset').value
+      document.getElementById('yt-ua-custom-row').style.display = preset === 'custom' ? '' : 'none'
+      saveYtUserAgent()
+    }
+
+    function saveYtUserAgent() {
+      const preset = document.getElementById('yt-ua-preset').value
+      const custom = document.getElementById('yt-ua-custom').value.trim()
+      ipcRenderer.send('set-yt-useragent', { ytUaPreset: preset, ytUaCustom: custom })
     }
 
     function saveYtPlayerSettings() {

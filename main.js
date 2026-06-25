@@ -59,7 +59,9 @@ function loadSettings() {
     ytSubtitles: false,
     ytReencode: false,
     ytQuality: 'hd1080',
-    ytNoFullscreen: true
+    ytNoFullscreen: true,
+    ytUaPreset: 'chrome-win',
+    ytUaCustom: ''
   }
 }
 
@@ -196,6 +198,22 @@ function isYouTubeUrl(url) {
     const host = new URL(url).hostname.replace('www.', '')
     return host === 'youtube.com' || host === 'youtu.be'
   } catch { return false }
+}
+
+// ─── User-Agent spoofing (YouTube) ─────────────────────────────────────────────
+
+const YT_UA_PRESETS = {
+  'chrome-win':   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  'chrome-mac':   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  'firefox-win':  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0',
+  'edge-win':     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0',
+  'safari-mac':   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15',
+  'chrome-linux': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+}
+
+function getYtUserAgent() {
+  if (settings.ytUaPreset === 'custom' && settings.ytUaCustom) return settings.ytUaCustom
+  return YT_UA_PRESETS[settings.ytUaPreset] || YT_UA_PRESETS['chrome-win']
 }
 
 // ─── Windows ──────────────────────────────────────────────────────────────────
@@ -681,7 +699,7 @@ ipcMain.on('yt-view-create', (e, { videoId, x, y, width, height }) => {
     }
   })
 
-  const ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+  const ua = getYtUserAgent()
   ytView.webContents.setUserAgent(ua)
 
   overlayWindow.addBrowserView(ytView)
@@ -775,6 +793,15 @@ ipcMain.on('yt-view-destroy', () => {
 
 ipcMain.on('set-yt-settings', (e, patch) => {
   settings = saveSettings(patch)
+})
+
+ipcMain.on('set-yt-useragent', (e, patch) => {
+  settings = saveSettings(patch)
+  if (ytView && !ytView.webContents.isDestroyed()) {
+    const ua = getYtUserAgent()
+    ytView.webContents.setUserAgent(ua)
+    ytView.webContents.reload()
+  }
 })
 
 ipcMain.on('set-yt-player-settings', (e, patch) => {
