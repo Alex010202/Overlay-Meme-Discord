@@ -475,7 +475,6 @@
     ipcRenderer.send('set-click-through', !hasMessages)
   }
 
-  // ── Auto-resize fenêtre selon le ratio du média ────────────────────────────
   function notifyMediaSize(naturalWidth, naturalHeight) {
     if (!autoResizeMedia || !naturalWidth || !naturalHeight) return
     ipcRenderer.send('resize-for-media', { naturalWidth, naturalHeight })
@@ -498,13 +497,11 @@
     sizeHint.style.opacity = '1'
   })
 
-  // ── Remove msg ──────────────────────────────────────────────────────────────
 
   function removeMsg(div) {
     if (div._removing) return
     div._removing = true
     if (div._audioEl) { try { div._audioEl.pause() } catch(e){} }
-    // Pause any video
     const vid = div.querySelector('video')
     if (vid) { try { vid.pause() } catch(e){} }
 
@@ -521,7 +518,6 @@
       if (e.propertyName !== 'max-height') return
       div.remove()
       updateClickThrough()
-      // Sync media-mode after removal
       requestAnimationFrame(() => {
         const remaining = document.querySelectorAll('.msg')
         const lastIsMedia = remaining.length > 0 && remaining[remaining.length - 1].querySelector('img, video')
@@ -530,17 +526,9 @@
     }, { once: true })
   }
 
-  // ── Skip current media ───────────────────────────────────────────────────────
 
   function skipCurrentMedia() {
     const msgs = document.querySelectorAll('.msg')
-    // Skip le dernier message média (vidéo, img, audio, yt-dlp, YouTube natif,
-    // ou un yt-dlp encore en chargement). On se base sur la classe .media-msg
-    // posée à la création, car certains medias (vue YouTube native via
-    // BrowserView, ou un yt-dlp pas encore résolu) n'ont pas encore d'élément
-    // <video>/<img> dans le DOM au moment du skip — l'ancien sélecteur les
-    // ratait, ce qui faisait supprimer un AUTRE message à la place pendant
-    // que la vidéo/le son réel continuait.
     for (let i = msgs.length - 1; i >= 0; i--) {
       const m = msgs[i]
       if (m.classList.contains('media-msg') && !m._removing) {
@@ -552,7 +540,6 @@
 
   ipcRenderer.on('skip-media', () => skipCurrentMedia())
 
-  // ── Click-to-pause sur la zone media ────────────────────────────────────────
 
   function addMediaClickZone(div) {
     const zone = document.createElement('div')
@@ -577,7 +564,6 @@
     div.appendChild(zone)
   }
 
-  // ── Skip button ─────────────────────────────────────────────────────────────
 
   function addSkipBtn(div) {
     const btn = document.createElement('button')
@@ -587,9 +573,7 @@
     div.appendChild(btn)
   }
 
-  // ── yt-dlp player ───────────────────────────────────────────────────────────
 
-  // Map loadingUrl → div pour pouvoir remplacer le loading card
   const loadingDivs = new Map()
 
   function buildYtDlpPlayer(data, div) {
@@ -617,7 +601,6 @@
       videoWrap.appendChild(titleEl)
     }
 
-    // Separate audio track if yt-dlp returned two URLs
     let audioEl = null
     let syncInterval = null
     let started = false
@@ -628,7 +611,6 @@
       audioEl.volume = videoVolume
       audioEl.preload = 'auto'
 
-      // Bloquer l'autoplay — on lance manuellement quand les deux sont buffurisés
       vid.autoplay = false
       vid.preload = 'auto'
 
@@ -640,16 +622,11 @@
           if (vid.paused || audioEl.paused || !vid.duration) return
           const drift = audioEl.currentTime - vid.currentTime
           if (Math.abs(drift) > 1.5) {
-            // Drift trop grand (>1.5s) : seek direct, inévitable
             audioEl.currentTime = vid.currentTime
             audioEl.playbackRate = 1.0
           } else if (Math.abs(drift) > 0.05) {
-            // Drift léger : ajuster la vitesse doucement pour rattraper sans saut
-            // drift positif = audio en avance → ralentir audio
-            // drift négatif = audio en retard → accélérer audio
             audioEl.playbackRate = drift > 0 ? 0.95 : 1.05
           } else {
-            // Sync OK, vitesse normale
             audioEl.playbackRate = 1.0
           }
         }, 500)
@@ -658,7 +635,6 @@
       function tryStart() {
         if (started || !vidReady || !audReady) return
         started = true
-        // Remettre les deux à zéro et lancer ensemble
         vid.currentTime = 0
         audioEl.currentTime = 0
         vid.play().then(() => {
@@ -668,11 +644,9 @@
         }).catch(() => {})
       }
 
-      // canplaythrough = assez de buffer pour lire sans freeze
       vid.addEventListener('canplaythrough', () => { vidReady = true; tryStart() }, { once: true })
       audioEl.addEventListener('canplaythrough', () => { audReady = true; tryStart() }, { once: true })
 
-      // Fallback : si canplaythrough ne se déclenche pas après 5s, on tente quand même
       setTimeout(() => {
         if (!started) { vidReady = true; audReady = true; tryStart() }
       }, 5000)
@@ -683,7 +657,7 @@
       })
 
       vid.addEventListener('play', () => {
-        if (!started) return  // géré par tryStart
+        if (!started) return
         audioEl.currentTime = vid.currentTime
         audioEl.play().catch(() => {})
         startSync()
@@ -700,19 +674,16 @@
       })
     }
 
-    // Si pas d'audio séparé, afficher dès que la vidéo peut jouer (canplay ou playing)
     if (!audioUrl || audioUrl === videoUrl) {
       vid.style.visibility = 'hidden'
       const showVid = () => { vid.style.visibility = 'visible' }
       vid.addEventListener('canplay', showVid, { once: true })
       vid.addEventListener('playing', showVid, { once: true })
-      // Fallback : afficher quoi qu'il arrive après 2s pour éviter l'écran noir
       setTimeout(() => { vid.style.visibility = 'visible' }, 2000)
     }
 
     videoWrap.appendChild(vid)
 
-    // Controls
     const controls = document.createElement('div')
     controls.className = 'ytdlp-controls'
 
@@ -737,7 +708,6 @@
     controls.appendChild(progressWrap)
     controls.appendChild(timeEl)
 
-    // Click-to-pause overlay
     const clickZone = document.createElement('div')
     clickZone.className = 'media-click-zone'
     clickZone.innerHTML = '<span class="pause-icon">⏸</span>'
@@ -773,7 +743,6 @@
     player.appendChild(videoWrap)
     player.appendChild(controls)
 
-    // Store audio ref for volume updates
     div._audioEl = audioEl
 
     return { player, vid }
@@ -787,12 +756,10 @@
     const contentEl = div.querySelector('.content')
     if (!contentEl) return
 
-    // Remove loading card
     const loadingCard = contentEl.querySelector('.loading-card')
     if (loadingCard) loadingCard.remove()
 
     if (!data.videoUrl) {
-      // Échec yt-dlp — affiche juste un lien, plus rien à "media-skip"
       div.classList.remove('media-msg')
       const errEl = document.createElement('div')
       errEl.style.cssText = 'font-size:11px;color:rgba(255,255,255,0.35);margin-top:4px;'
@@ -806,20 +773,17 @@
     const { player, vid } = buildYtDlpPlayer(data, div)
     contentEl.appendChild(player)
 
-    // Auto-resize sur les vidéos yt-dlp
     if (autoResizeMedia) {
       const onMeta = () => { if (vid.videoWidth && vid.videoHeight) notifyMediaSize(vid.videoWidth, vid.videoHeight) }
       if (vid.videoWidth) onMeta(); else vid.addEventListener('loadedmetadata', onMeta, { once: true })
     }
 
-    // Durée
     const dur = data.duration ? data.duration * 1000 : durationVideo
     if (!videoUntilEnd) {
       setTimeout(() => removeMsg(div), dur)
     }
   })
 
-  // ── Audio player ─────────────────────────────────────────────────────────────
 
   function buildAudioPlayer(audioUrl, isVoice) {
     const bars = Array.from({ length: 28 }, (_, i) => {
@@ -889,14 +853,12 @@
     return wrap
   }
 
-  // ── Message handler ──────────────────────────────────────────────────────────
 
   ipcRenderer.on('message', (e, msg) => {
     const container = document.getElementById('messages')
     const msgs = container.querySelectorAll('.msg')
     if (msgs.length >= MAX) removeMsg(msgs[0])
 
-    // ── YouTube WebContentsView ─────────────────────────────────────────────
     if (msg.youtubeView) {
       document.body.classList.add('media-mode')
 
@@ -916,7 +878,6 @@
       container.appendChild(div)
       updateClickThrough()
 
-      // Calculer la position/taille du slot pour la WebContentsView
       function placeYtView() {
         const slot = div.querySelector('.yt-view-slot')
         if (!slot) return
@@ -930,10 +891,8 @@
         })
       }
 
-      // Attendre que le DOM soit positionné
       requestAnimationFrame(() => requestAnimationFrame(placeYtView))
 
-      // Observer les resize de la fenêtre pour recaler la vue
       const resizeObs = new ResizeObserver(() => {
         const slot = div.querySelector('.yt-view-slot')
         if (!slot) return
@@ -945,7 +904,6 @@
       })
       resizeObs.observe(div)
 
-      // Nettoyage : détruire la vue quand le message disparaît
       const origRemove = div.remove.bind(div)
       div.remove = () => {
         resizeObs.disconnect()
@@ -964,9 +922,6 @@
     if (isMedia) document.body.classList.add('media-mode')
 
     const div = document.createElement('div')
-    // isLoading = yt-dlp en cours de résolution → deviendra une vidéo,
-    // on le marque déjà media-msg pour que le skip puisse le cibler
-    // pendant le chargement (sinon il ratait un autre message à la place).
     div.className = 'msg' + ((isMedia || isAudio || isLoading) ? ' media-msg' : '')
 
     let mediaHtml = ''
@@ -1001,7 +956,6 @@
       </div>
     `
 
-    // Audio player
     if (isAudio) {
       const contentEl = div.querySelector('.content')
       if (msg.content) {
@@ -1021,7 +975,6 @@
       }, { once: true })
     }
 
-    // Loading card (yt-dlp en cours)
     if (isLoading) {
       const contentEl = div.querySelector('.content')
       if (msg.content) {
@@ -1037,14 +990,12 @@
       loadingDivs.set(msg.loadingUrl, div)
     }
 
-    // Click-to-pause (vidéo uniquement) + skip btn (tout type de média)
     if (isMedia && msg.gifIsVideo) addMediaClickZone(div)
     if (isMedia || isAudio || isLoading) addSkipBtn(div)
 
     container.appendChild(div)
     updateClickThrough()
 
-    // Auto-resize : lire les dimensions naturelles du média une fois chargé
     if (isMedia && autoResizeMedia) {
       if (msg.gifIsVideo) {
         const v = div.querySelector('video')
@@ -1061,7 +1012,6 @@
       }
     }
 
-    // Timer
     if (!isLoading) {
       let type = 'text'
       if (msg.gifUrl)            type = msg.gifIsVideo ? 'video' : 'gif'
@@ -1078,7 +1028,6 @@
     }
   })
 
-  // ── IPC settings ─────────────────────────────────────────────────────────────
 
   ipcRenderer.on('set-fontsize', (e, size) => {
     document.documentElement.style.setProperty('--font-size', size + 'px')

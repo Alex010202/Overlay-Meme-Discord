@@ -29,6 +29,13 @@
       "token.env",
       "node_modules/**/*"
     ],
+
+    "extraResources": [
+      {
+        "from": "yt-dlp.exe",
+        "to": "."
+      }
+    ],
     "win": {
       "target": "nsis",
       "icon": "icon.ico"

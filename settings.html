@@ -581,7 +581,6 @@
       if (s.ytExtraArgs !== undefined) document.getElementById('yt-extra-args').value = s.ytExtraArgs
       if (s.ytSubtitles !== undefined) document.getElementById('yt-subtitles').checked = s.ytSubtitles
       if (s.ytReencode  !== undefined) document.getElementById('yt-reencode').checked  = s.ytReencode
-      // Live player controls
       if (s.volume !== undefined) {
         const pct = Math.round((s.volume || 0.8) * 100)
         document.getElementById('yt-live-volume').value = pct
