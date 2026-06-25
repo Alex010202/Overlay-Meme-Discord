@@ -453,6 +453,7 @@
   let durationAudio = 15000
   let videoUntilEnd = false
   let audioUntilEnd = false
+  let autoResizeMedia = false
 
   function esc(t) {
     return String(t)
@@ -472,6 +473,12 @@
   function updateClickThrough() {
     const hasMessages = document.querySelectorAll('.msg').length > 0
     ipcRenderer.send('set-click-through', !hasMessages)
+  }
+
+  // ── Auto-resize fenêtre selon le ratio du média ────────────────────────────
+  function notifyMediaSize(naturalWidth, naturalHeight) {
+    if (!autoResizeMedia || !naturalWidth || !naturalHeight) return
+    ipcRenderer.send('resize-for-media', { naturalWidth, naturalHeight })
   }
 
   document.addEventListener('mousemove', updateClickThrough)
@@ -693,10 +700,14 @@
       })
     }
 
-    // Si pas d'audio séparé, on cache quand même la vidéo et on l'affiche au premier play
+    // Si pas d'audio séparé, afficher dès que la vidéo peut jouer (canplay ou playing)
     if (!audioUrl || audioUrl === videoUrl) {
       vid.style.visibility = 'hidden'
-      vid.addEventListener('playing', () => { vid.style.visibility = 'visible' }, { once: true })
+      const showVid = () => { vid.style.visibility = 'visible' }
+      vid.addEventListener('canplay', showVid, { once: true })
+      vid.addEventListener('playing', showVid, { once: true })
+      // Fallback : afficher quoi qu'il arrive après 2s pour éviter l'écran noir
+      setTimeout(() => { vid.style.visibility = 'visible' }, 2000)
     }
 
     videoWrap.appendChild(vid)
@@ -794,6 +805,12 @@
 
     const { player, vid } = buildYtDlpPlayer(data, div)
     contentEl.appendChild(player)
+
+    // Auto-resize sur les vidéos yt-dlp
+    if (autoResizeMedia) {
+      const onMeta = () => { if (vid.videoWidth && vid.videoHeight) notifyMediaSize(vid.videoWidth, vid.videoHeight) }
+      if (vid.videoWidth) onMeta(); else vid.addEventListener('loadedmetadata', onMeta, { once: true })
+    }
 
     // Durée
     const dur = data.duration ? data.duration * 1000 : durationVideo
@@ -1027,6 +1044,23 @@
     container.appendChild(div)
     updateClickThrough()
 
+    // Auto-resize : lire les dimensions naturelles du média une fois chargé
+    if (isMedia && autoResizeMedia) {
+      if (msg.gifIsVideo) {
+        const v = div.querySelector('video')
+        if (v) {
+          const onMeta = () => { if (v.videoWidth && v.videoHeight) notifyMediaSize(v.videoWidth, v.videoHeight) }
+          if (v.videoWidth) onMeta(); else v.addEventListener('loadedmetadata', onMeta, { once: true })
+        }
+      } else {
+        const img = div.querySelector('img')
+        if (img) {
+          const onLoad = () => { if (img.naturalWidth) notifyMediaSize(img.naturalWidth, img.naturalHeight) }
+          if (img.complete && img.naturalWidth) onLoad(); else img.addEventListener('load', onLoad, { once: true })
+        }
+      }
+    }
+
     // Timer
     if (!isLoading) {
       let type = 'text'
@@ -1080,6 +1114,10 @@
     document.body.classList.toggle('dragbar-hidden', !!hidden)
   })
 
+  ipcRenderer.on('set-auto-resize-media', (e, enabled) => {
+    autoResizeMedia = !!enabled
+  })
+
   ipcRenderer.send('get-settings')
   ipcRenderer.on('load-settings', (e, s) => {
     if (s.fontSize)   document.documentElement.style.setProperty('--font-size', s.fontSize + 'px')
@@ -1094,6 +1132,7 @@
     if (s.videoUntilEnd !== undefined) videoUntilEnd = s.videoUntilEnd
     if (s.audioUntilEnd !== undefined) audioUntilEnd = s.audioUntilEnd
     if (s.dragbarHidden !== undefined) document.body.classList.toggle('dragbar-hidden', !!s.dragbarHidden)
+    if (s.autoResizeMedia !== undefined) autoResizeMedia = !!s.autoResizeMedia
   })
   </script>
 </body>

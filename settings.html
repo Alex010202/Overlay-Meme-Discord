@@ -218,6 +218,20 @@
           </div>
         </div>
         <div class="card">
+          <div class="card-title">Redimensionnement automatique</div>
+          <div class="toggle-row">
+            <div>
+              <div class="toggle-text">Adapter la fenêtre au média</div>
+              <div class="toggle-sub">Redimensionne l'overlay selon le ratio de chaque image ou vidéo</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="auto-resize-media" onchange="toggleAutoResizeMedia(this.checked)">
+              <div class="toggle-track"></div>
+            </label>
+          </div>
+        </div>
+
+        <div class="card">
           <div class="card-title">Fond des messages</div>
           <span class="field-label">Couleur</span>
           <div class="color-row">
@@ -550,6 +564,9 @@
       if (s.dragbarHidden !== undefined) {
         document.getElementById('dragbar-lock').checked = !!s.dragbarHidden
       }
+      if (s.autoResizeMedia !== undefined) {
+        document.getElementById('auto-resize-media').checked = !!s.autoResizeMedia
+      }
       if (s.ytResolution) {
         document.querySelectorAll('#resolution-btns .res-btn').forEach(b => b.classList.toggle('active', b.dataset.res === s.ytResolution))
       }
@@ -645,6 +662,7 @@
       ipcRenderer.send('set-overlay-bg', `rgba(${r},${g},${b},${op})`)
     }
     function toggleDragbar(hidden) { ipcRenderer.send('set-dragbar-hidden', hidden) }
+    function toggleAutoResizeMedia(enabled) { ipcRenderer.send('set-auto-resize-media', enabled) }
     function toggleSound(enabled) {
       document.getElementById('volume-container').classList.toggle('open', enabled)
       const vol = enabled ? parseFloat(document.getElementById('volume').value) : 0

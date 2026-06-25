@@ -52,6 +52,7 @@ function loadSettings() {
     videoUntilEnd: false,
     audioUntilEnd: false,
     dragbarHidden: false,
+    autoResizeMedia: false,
     ytResolution: '1080',
     ytFormat: 'mp4',
     ytTimeout: 30000,
@@ -92,10 +93,33 @@ function findYtDlp() {
   return 'yt-dlp'
 }
 
+function isTikTokUrl(url) {
+  try {
+    const host = new URL(url).hostname.replace('www.', '')
+    return host === 'tiktok.com' || host.endsWith('.tiktok.com') || host === 'vm.tiktok.com'
+  } catch { return false }
+}
+
 function buildYtDlpArgs(url) {
   const s = settings
   const res = s.ytResolution || '1080'
   const fmt = s.ytFormat || 'mp4'
+
+  // TikTok : format selector spécial, pas de filtre codec avc1 (ça matche rien),
+  // UA mobile obligatoire sinon TikTok bloque la requête
+  if (isTikTokUrl(url)) {
+    const args = [
+      '-f', `bestvideo[height<=${res}]+bestaudio/bestvideo[height<=${res}]/best[height<=${res}]/best`,
+      '--get-url',
+      '--no-playlist',
+      '--impersonate', 'chrome',
+    ]
+    if (s.ytExtraArgs) {
+      args.push(...s.ytExtraArgs.trim().split(/\s+/).filter(Boolean))
+    }
+    args.push(url)
+    return args
+  }
 
   let formatStr
   if (res === 'best') {
@@ -123,6 +147,49 @@ function buildYtDlpArgs(url) {
   return args
 }
 
+// Dossier temp pour les vidéos TikTok téléchargées
+const os = require('os')
+const TIKTOK_TMP_DIR = path.join(os.tmpdir(), 'discord-overlay-tiktok')
+if (!fs.existsSync(TIKTOK_TMP_DIR)) fs.mkdirSync(TIKTOK_TMP_DIR, { recursive: true })
+
+// Nettoyer les vieux fichiers TikTok au démarrage (> 10 min)
+function cleanTiktokTmp() {
+  try {
+    const files = fs.readdirSync(TIKTOK_TMP_DIR)
+    const now = Date.now()
+    for (const f of files) {
+      const fp = path.join(TIKTOK_TMP_DIR, f)
+      try {
+        const stat = fs.statSync(fp)
+        if (now - stat.mtimeMs > 10 * 60 * 1000) fs.unlinkSync(fp)
+      } catch {}
+    }
+  } catch {}
+}
+cleanTiktokTmp()
+
+// Pour TikTok : télécharger en local puis servir le fichier
+// Les URLs signées expirent en quelques secondes, impossible de les streamer directement
+function fetchYtDlpTikTokFile(url) {
+  return new Promise((resolve) => {
+    const bin = findYtDlp()
+    const timeout = (settings.ytTimeout || 30000) + 30000 // +30s pour le dl
+    const outPath = path.join(TIKTOK_TMP_DIR, `tt_${Date.now()}.mp4`)
+    const args = [
+      '-f', 'bestvideo+bestaudio/best',
+      '--merge-output-format', 'mp4',
+      '--impersonate', 'chrome',
+      '--no-playlist',
+      '-o', outPath,
+      url
+    ]
+    execFile(bin, args, { timeout }, (err) => {
+      if (err || !fs.existsSync(outPath)) { resolve(null); return }
+      resolve(outPath)
+    })
+  })
+}
+
 function fetchYtDlpStream(url) {
   return new Promise((resolve) => {
     const bin = findYtDlp()
@@ -146,11 +213,12 @@ function fetchYtDlpMeta(url) {
   return new Promise((resolve) => {
     const bin = findYtDlp()
     const timeout = settings.ytTimeout || 30000
-    execFile(bin, [
-      '--dump-json',
-      '--no-playlist',
-      url
-    ], { timeout }, (err, stdout) => {
+    const args = ['--dump-json', '--no-playlist']
+    if (isTikTokUrl(url)) {
+      args.push('--impersonate', 'chrome')
+    }
+    args.push(url)
+    execFile(bin, args, { timeout }, (err, stdout) => {
       if (err || !stdout.trim()) { resolve(null); return }
       try { resolve(JSON.parse(stdout.trim())) }
       catch { resolve(null) }
@@ -239,6 +307,20 @@ function createOverlayWindow() {
   })
   overlayWindow.setAlwaysOnTop(true, 'screen-saver')
   overlayWindow.loadFile('overlay.html')
+
+  // Injecter les headers nécessaires pour les URLs CDN TikTok
+  // (Referer + User-Agent requis sinon 403 sur v*-webapp*.tiktok.com)
+  const ses = overlayWindow.webContents.session
+  ses.webRequest.onBeforeSendHeaders(
+    { urls: ['*://*.tiktok.com/*', '*://*.tiktokcdn.com/*', '*://*.tiktokv.com/*'] },
+    (details, callback) => {
+      const headers = { ...details.requestHeaders }
+      headers['Referer'] = 'https://www.tiktok.com/'
+      headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36'
+      headers['Origin'] = 'https://www.tiktok.com'
+      callback({ requestHeaders: headers })
+    }
+  )
 }
 
 function createSettingsWindow() {
@@ -406,7 +488,47 @@ function startBot(channelId) {
       for (const embed of message.embeds) {
         if (embed.video?.url) {
           const embedSourceUrl = embed.url || embed.video.url
+
           if (isYouTubeUrl(embedSourceUrl)) break
+
+          // TikTok player embed → extraire l'ID et passer à yt-dlp
+          // Discord génère embed.video.url = "https://www.tiktok.com/player/v1/VIDEO_ID"
+          // et embed.url = "https://www.tiktok.com/@user/video/VIDEO_ID"
+          const tiktokEmbedMatch = (embed.video.url || '').match(/tiktok\.com\/player\/v1\/(\d+)/)
+          if (tiktokEmbedMatch) {
+            // Préférer embed.url (lien canonique) sinon reconstruire depuis l'ID
+            const tiktokUrl = embed.url || `https://www.tiktok.com/video/${tiktokEmbedMatch[1]}`
+            content = content.replace(tiktokUrl, '').replace(embed.video.url, '').trim()
+
+            const author = message.author.username
+            const avatar = message.author.displayAvatarURL({ size: 32 })
+            const time = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+
+            if (overlayWindow) overlayWindow.webContents.send('message', {
+              author, avatar, time,
+              content: content || '',
+              loading: true,
+              loadingUrl: tiktokUrl
+            })
+
+            const [filePath, meta] = await Promise.all([
+              fetchYtDlpTikTokFile(tiktokUrl),
+              fetchYtDlpMeta(tiktokUrl)
+            ])
+
+            if (overlayWindow) overlayWindow.webContents.send('ytdlp-resolved', {
+              loadingUrl: tiktokUrl,
+              videoUrl: filePath ? `file:///${filePath.replace(/\\/g, '/')}` : null,
+              audioUrl: null,
+              title: meta?.title || null,
+              thumbnail: meta?.thumbnail || null,
+              duration: meta?.duration || null,
+              uploader: meta?.uploader || meta?.channel || null,
+              sourceUrl: tiktokUrl
+            })
+            return
+          }
+
           gifUrl = embed.video.url
           gifIsVideo = true
           gifIsLooping = embed.type === 'gifv' || /tenor\.com|giphy\.com/i.test(embed.url || '')
@@ -481,6 +603,26 @@ function startBot(channelId) {
           loading: true,
           loadingUrl: ytUrl
         })
+
+        // TikTok : les URLs signées expirent en quelques secondes.
+        // On télécharge la vidéo en local d'abord, puis on envoie le chemin fichier.
+        if (isTikTokUrl(ytUrl)) {
+          const [filePath, meta] = await Promise.all([
+            fetchYtDlpTikTokFile(ytUrl),
+            fetchYtDlpMeta(ytUrl)
+          ])
+          if (overlayWindow) overlayWindow.webContents.send('ytdlp-resolved', {
+            loadingUrl: ytUrl,
+            videoUrl: filePath ? `file:///${filePath.replace(/\\/g, '/')}` : null,
+            audioUrl: null,
+            title: meta?.title || null,
+            thumbnail: meta?.thumbnail || null,
+            duration: meta?.duration || null,
+            uploader: meta?.uploader || meta?.channel || null,
+            sourceUrl: ytUrl
+          })
+          return
+        }
 
         const [streams, meta] = await Promise.all([
           fetchYtDlpStream(ytUrl),
@@ -598,6 +740,54 @@ ipcMain.on('set-dragbar-hidden', (e, hidden) => {
   if (overlayWindow) overlayWindow.webContents.send('set-dragbar-hidden', hidden)
 })
 
+ipcMain.on('set-auto-resize-media', (e, enabled) => {
+  settings = saveSettings({ autoResizeMedia: enabled })
+  if (overlayWindow) overlayWindow.webContents.send('set-auto-resize-media', enabled)
+})
+
+// Redimensionner l'overlay pour coller au ratio du média
+ipcMain.on('resize-for-media', (e, { naturalWidth, naturalHeight }) => {
+  if (!overlayWindow || overlayWindow.isDestroyed()) return
+  if (!settings.autoResizeMedia) return
+
+  const bounds = overlayWindow.getBounds()
+  const display = require('electron').screen.getDisplayMatching(bounds)
+  const workArea = display.workArea
+
+  // Taille max = 80% de l'écran
+  const maxW = Math.floor(workArea.width  * 0.8)
+  const maxH = Math.floor(workArea.height * 0.8)
+  // Taille min = 200px
+  const minW = 200, minH = 150
+
+  const ratio = naturalWidth / naturalHeight
+  // Partir de la largeur actuelle et ajuster la hauteur selon le ratio
+  // + 32px pour la dragbar + éventuels contrôles
+  let newW = Math.max(minW, Math.min(maxW, naturalWidth))
+  let newH = Math.round(newW / ratio) + 32
+
+  // Si trop haut, réduire par la hauteur
+  if (newH > maxH) {
+    newH = maxH
+    newW = Math.round((newH - 32) * ratio)
+  }
+  newW = Math.max(minW, newW)
+  newH = Math.max(minH, newH)
+
+  // Sauvegarder les bounds normaux avant le resize pour pouvoir y revenir
+  overlayNormalBounds = bounds
+
+  overlayWindow.setBounds({ x: bounds.x, y: bounds.y, width: newW, height: newH }, true)
+})
+
+ipcMain.on('reset-overlay-size', () => {
+  if (!overlayWindow || overlayWindow.isDestroyed()) return
+  if (!settings.autoResizeMedia) return
+  if (overlayNormalBounds) {
+    overlayWindow.setBounds(overlayNormalBounds, true)
+  }
+})
+
 ipcMain.on('open-profiles-folder', () => {
   shell.showItemInFolder(PROFILES_PATH)
 })
@@ -675,6 +865,7 @@ ipcMain.on('load-profile', (e, { name }) => {
       videoUntilEnd: settings.videoUntilEnd
     })
     overlayWindow.webContents.send('set-dragbar-hidden', !!settings.dragbarHidden)
+    overlayWindow.webContents.send('set-auto-resize-media', !!settings.autoResizeMedia)
   }
   if (settingsWindow) settingsWindow.webContents.send('load-settings', settings)
   registerHotkeys()
@@ -710,30 +901,48 @@ ipcMain.on('yt-view-create', (e, { videoId, x, y, width, height }) => {
 
   ytView.webContents.loadURL(`https://www.youtube.com/watch?v=${videoId}&autoplay=1`)
 
-  let injected = false
+  const noFs = settings.ytNoFullscreen !== false
+
+  // Réinitialisé à chaque navigation pour relancer l'injection sur chaque chargement de page
+  ytView.webContents.on('did-navigate', () => {})  // garde la nav dans les logs si besoin
+
+  ytView.webContents.on('enter-html-full-screen', () => {
+    ytView.webContents.executeJavaScript(`
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
+    `).catch(() => {})
+  })
 
   const inject = () => {
-    if (injected) return
-    injected = true
+    // On vérifie qu'on est bien sur la bonne page YT (pas une redirection intermédiaire)
+    const url = ytView.webContents.getURL()
+    if (!url.includes('youtube.com/watch')) return
 
-    ytView.webContents.on('enter-html-full-screen', () => {
-      ytView.webContents.executeJavaScript(`
-        if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
-      `).catch(() => {})
-    })
-
-    const noFs = settings.ytNoFullscreen !== false  // true par défaut
     ytView.webContents.executeJavaScript(`
       (function() {
+        if (window.__overlayInjected) return
+        window.__overlayInjected = true
+
         ${noFs ? `
-        // Bloquer requestFullscreen
-        const origRFS = Element.prototype.requestFullscreen
         Element.prototype.requestFullscreen = function() { return Promise.resolve() }
-        // Sortir si plein écran quand même
         document.addEventListener('fullscreenchange', () => {
           if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
         })
         ` : ''}
+
+        // Injecter le CSS immédiatement pour cacher popups/UI dès que possible
+        const style = document.createElement('style')
+        style.id = '__overlay-style'
+        style.textContent =
+          'ytd-masthead, #masthead-container { display:none!important }' +
+          'ytd-watch-next-secondary-results-renderer, #secondary { display:none!important }' +
+          '#below, #comments, ytd-miniplayer { display:none!important }' +
+          // Popups cookies, sign-in, age gate, etc.
+          'tp-yt-paper-dialog, ytd-popup-container, ytd-consent-bump-v2-lightbox { display:none!important }' +
+          '#cookie-banner, .ytd-consent-bump-v2-renderer { display:none!important }' +
+          '.ytp-pause-overlay, .ytp-endscreen-content { display:none!important }' +
+          'html, body { overflow:hidden!important; margin:0!important; padding:0!important }' +
+          ${noFs ? `'.ytp-fullscreen-button { display:none!important }'` : `''`}
+        if (!document.getElementById('__overlay-style')) document.head.appendChild(style)
 
         const run = () => {
           const player = document.getElementById('movie_player')
@@ -749,20 +958,11 @@ ipcMain.on('yt-view-create', (e, { videoId, x, y, width, height }) => {
 
           if (player.setPlaybackQuality) player.setPlaybackQuality('${settings.ytQuality || 'hd720'}')
 
+          // Forcer la lecture si YouTube a mis en pause à cause d'un popup
           if (player.playVideo) player.playVideo()
 
           const rect = player.getBoundingClientRect()
           window.scrollTo(0, rect.top + window.scrollY)
-
-          const style = document.createElement('style')
-          style.textContent =
-            'ytd-masthead, #masthead-container { display:none!important }' +
-            'ytd-watch-next-secondary-results-renderer, #secondary { display:none!important }' +
-            '#below, #comments, ytd-miniplayer { display:none!important }' +
-            'tp-yt-paper-dialog, ytd-popup-container { display:none!important }' +
-            'html, body { overflow:hidden!important; margin:0!important; padding:0!important }' +
-            ${noFs ? `'.ytp-fullscreen-button { display:none!important }'` : `''`}
-          document.head.appendChild(style)
 
           return true
         }
@@ -770,7 +970,7 @@ ipcMain.on('yt-view-create', (e, { videoId, x, y, width, height }) => {
         let tries = 0
         const iv = setInterval(() => {
           tries++
-          if (run() || tries > 30) clearInterval(iv)
+          if (run() || tries > 40) clearInterval(iv)
         }, 200)
       })()
     `).catch(() => {})
