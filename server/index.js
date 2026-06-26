@@ -19,6 +19,12 @@ wss.on('connection', (ws, req) => {
   console.log('[WS] Client connecté')
   clients.add(ws)
 
+  if (client.isReady()) {
+    ws.send(JSON.stringify({ event: 'status', data: { ok: true, tag: client.user.tag } }))
+  } else {
+    ws.send(JSON.stringify({ event: 'status', data: { ok: false, error: 'Bot pas encore prêt' } }))
+  }
+
   ws.on('close', () => {
     clients.delete(ws)
     console.log('[WS] Client déconnecté')
@@ -161,7 +167,6 @@ async function handleMessage(message, currentChannelId) {
           const tiktokUrl = embed.url || `https://www.tiktok.com/video/${tiktokMatch[1]}`
           content = content.replace(tiktokUrl, '').replace(embed.video.url, '').trim()
           broadcast('message', { author, avatar, time, content, loading: true, loadingUrl: tiktokUrl })
-          // Le client Electron gèrera le téléchargement TikTok en local via yt-dlp
           broadcast('ytdlp-needed', { url: tiktokUrl, type: 'tiktok', content, author, avatar, time })
           return
         }
