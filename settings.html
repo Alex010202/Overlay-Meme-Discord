@@ -2,6 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -83,7 +84,7 @@
     }
     .nav:hover { background: var(--raised); color: var(--text-secondary); }
     .nav.active { background: var(--accent-dim); color: var(--accent); }
-    .nav-icon { font-size: 13px; flex-shrink: 0; }
+    .nav-icon { font-size: 15px; flex-shrink: 0; display: flex; align-items: center; }
 
     .content {
       flex: 1; overflow-y: auto; padding: 18px 20px 60px;
@@ -259,13 +260,65 @@
     @keyframes pulse { 0%,100% { opacity: 0.3; } 50% { opacity: 1; } }
 
     .custom-ua-row { display: none; margin-top: 8px; }
+
+    /* ── Thème ── */
+    .theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .theme-card {
+      border: 1px solid var(--border);
+      border-radius: 9px; overflow: hidden;
+      cursor: pointer; position: relative;
+      transition: border-color 0.15s, transform 0.1s;
+    }
+    .theme-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+    .theme-card.selected { border-color: var(--accent); border-width: 2px; }
+    .theme-preview {
+      height: 90px; border-bottom: 1px solid;
+      display: flex; overflow: hidden;
+    }
+    .tp-sidebar {
+      width: 28px; flex-shrink: 0;
+      border-right: 1px solid;
+      padding: 5px 4px;
+      display: flex; flex-direction: column; gap: 3px;
+    }
+    .tp-nav-item {
+      height: 5px; border-radius: 3px;
+      background: #888;
+    }
+    .tp-content { flex: 1; padding: 5px 6px; display: flex; flex-direction: column; gap: 3px; }
+    .tp-row {
+      display: flex; align-items: center; gap: 4px;
+      padding: 4px 5px; border-radius: 4px;
+      border: 1px solid transparent;
+    }
+    .tp-card-wrap { flex: 1; }
+    .tp-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .tp-line { height: 3px; border-radius: 99px; }
+    .tp-pill { width: 18px; height: 10px; border-radius: 99px; flex-shrink: 0; }
+    .tp-terminal-row {
+      display: flex; align-items: center; gap: 4px;
+      padding: 4px 5px;
+      border-left: 2px solid transparent;
+    }
+    .tp-square { width: 10px; height: 10px; flex-shrink: 0; }
+    .theme-info { padding: 8px 10px 4px; background: var(--surface); }
+    .theme-name { font-size: 12px; font-weight: 600; color: var(--text); }
+    .theme-desc { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+    .theme-check {
+      position: absolute; top: 6px; right: 6px;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--accent); color: white;
+      font-size: 10px; font-weight: 700;
+      display: none; align-items: center; justify-content: center;
+    }
+    .theme-card.selected .theme-check { display: flex; }
   </style>
 </head>
 <body>
 
   <div class="titlebar">
     <div class="titlebar-left">
-      <div class="titlebar-logo">💬</div>
+      <div class="titlebar-logo"><i class="ti ti-message-2" style="font-size:14px;color:white;"></i></div>
       <span class="titlebar-name">Discord Overlay</span>
     </div>
     <div class="titlebar-right">
@@ -281,22 +334,25 @@
   <div class="layout">
     <div class="sidebar">
       <div class="nav active" onclick="showTab('general', this)">
-        <span class="nav-icon">⚙️</span> Général
+        <span class="nav-icon"><i class="ti ti-settings"></i></span> Général
       </div>
       <div class="nav" onclick="showTab('affichage', this)">
-        <span class="nav-icon">🎨</span> Affichage
+        <span class="nav-icon"><i class="ti ti-layout"></i></span> Affichage
       </div>
       <div class="nav" onclick="showTab('son', this)">
-        <span class="nav-icon">🔊</span> Son
+        <span class="nav-icon"><i class="ti ti-volume"></i></span> Son
       </div>
       <div class="nav" onclick="showTab('messages', this)">
-        <span class="nav-icon">💬</span> Messages
+        <span class="nav-icon"><i class="ti ti-message-2"></i></span> Messages
       </div>
       <div class="nav" onclick="showTab('youtube', this)">
-        <span class="nav-icon">▶️</span> YouTube
+        <span class="nav-icon"><i class="ti ti-player-play"></i></span> YouTube
       </div>
       <div class="nav" onclick="showTab('profils', this)">
-        <span class="nav-icon">📁</span> Profils
+        <span class="nav-icon"><i class="ti ti-folder"></i></span> Profils
+      </div>
+      <div class="nav" onclick="showTab('theme', this)">
+        <span class="nav-icon"><i class="ti ti-palette"></i></span> Thème
       </div>
     </div>
 
@@ -645,6 +701,109 @@
         </div>
       </div>
 
+      <!-- THÈME -->
+      <div class="tab" id="tab-theme">
+        <div class="card">
+          <div class="card-header">Choisir un thème</div>
+          <div class="card-body">
+            <div class="row-full">
+              <div class="theme-grid">
+
+                <div class="theme-card" id="theme-obsidian" onclick="applyTheme('obsidian')">
+                  <div class="theme-preview" style="background:#0c0c0e;border-color:#1e1e24;">
+                    <div class="tp-sidebar" style="background:#0a0a0c;border-color:#1a1a20;">
+                      <div class="tp-nav-item" style="background:#1a1a24;"></div>
+                      <div class="tp-nav-item" style="opacity:.3;"></div>
+                      <div class="tp-nav-item" style="opacity:.3;"></div>
+                    </div>
+                    <div class="tp-content">
+                      <div class="tp-row" style="background:#111116;border-color:#1e1e26;">
+                        <div class="tp-dot" style="background:#6366f1;"></div>
+                        <div class="tp-line" style="background:#2a2a3a;flex:1;"></div>
+                        <div class="tp-pill" style="background:#6366f1;"></div>
+                      </div>
+                      <div class="tp-row" style="background:#111116;border-color:#1e1e26;">
+                        <div class="tp-dot" style="background:#6366f1;"></div>
+                        <div class="tp-line" style="background:#2a2a3a;flex:1;"></div>
+                        <div class="tp-pill" style="background:#222230;"></div>
+                      </div>
+                      <div class="tp-row" style="background:#111116;border-color:#1e1e26;">
+                        <div class="tp-line" style="background:#2a2a3a;flex:1;"></div>
+                        <div class="tp-pill" style="background:#6366f1;"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="theme-info">
+                    <div class="theme-name">Obsidian</div>
+                    <div class="theme-desc">Sombre, accent violet</div>
+                  </div>
+                  <div class="theme-check" id="check-obsidian">✓</div>
+                </div>
+
+                <div class="theme-card" id="theme-studio" onclick="applyTheme('studio')">
+                  <div class="theme-preview" style="background:#f5f0e8;border-color:#e0d8cc;">
+                    <div class="tp-sidebar" style="background:#ede8df;border-color:#d8d0c4;">
+                      <div class="tp-nav-item" style="background:#2c2420;"></div>
+                      <div class="tp-nav-item" style="background:#c8c0b4;opacity:.5;"></div>
+                      <div class="tp-nav-item" style="background:#c8c0b4;opacity:.5;"></div>
+                    </div>
+                    <div class="tp-content">
+                      <div class="tp-card-wrap" style="background:#faf7f2;border:1px solid #e0d8cc;border-radius:6px;overflow:hidden;">
+                        <div style="height:6px;background:#f0ece4;border-bottom:1px solid #e8e0d4;"></div>
+                        <div class="tp-row" style="border:none;">
+                          <div class="tp-line" style="background:#d8d0c4;flex:1;"></div>
+                          <div class="tp-pill" style="background:#2c2420;"></div>
+                        </div>
+                        <div class="tp-row" style="border:none;">
+                          <div class="tp-line" style="background:#d8d0c4;flex:1;"></div>
+                          <div class="tp-pill" style="background:#d8d0c4;"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="theme-info">
+                    <div class="theme-name">Studio</div>
+                    <div class="theme-desc">Chaud, beige naturel</div>
+                  </div>
+                  <div class="theme-check" id="check-studio">✓</div>
+                </div>
+
+                <div class="theme-card" id="theme-terminal" onclick="applyTheme('terminal')">
+                  <div class="theme-preview" style="background:#080c10;border-color:#1a2030;">
+                    <div class="tp-sidebar" style="background:#060a0e;border-color:#141c28;">
+                      <div class="tp-nav-item" style="background:rgba(0,229,122,.1);border-left:2px solid #00e57a;border-radius:0 4px 4px 0;"></div>
+                      <div class="tp-nav-item" style="background:#203040;opacity:.4;"></div>
+                      <div class="tp-nav-item" style="background:#203040;opacity:.4;"></div>
+                    </div>
+                    <div class="tp-content">
+                      <div class="tp-terminal-row" style="border-left-color:#00e57a;">
+                        <div class="tp-line" style="background:#1a2838;flex:1;"></div>
+                        <div class="tp-square" style="background:#00e57a;border-radius:3px;"></div>
+                      </div>
+                      <div class="tp-terminal-row" style="border-left-color:#141c28;">
+                        <div class="tp-line" style="background:#1a2838;flex:1;"></div>
+                        <div class="tp-square" style="background:#141c28;border:1px solid #1e2c3c;border-radius:3px;"></div>
+                      </div>
+                      <div class="tp-terminal-row" style="border-left-color:#141c28;">
+                        <div class="tp-line" style="background:#1a2838;flex:1;"></div>
+                        <div class="tp-square" style="background:#141c28;border:1px solid #1e2c3c;border-radius:3px;"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="theme-info">
+                    <div class="theme-name">Terminal</div>
+                    <div class="theme-desc">Sombre, accent vert</div>
+                  </div>
+                  <div class="theme-check" id="check-terminal">✓</div>
+                </div>
+
+              </div>
+              <div class="flash" id="theme-saved">✓ Thème appliqué</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -742,6 +901,7 @@
         document.getElementById('yt-ua-custom-row').style.display = s.ytUaPreset === 'custom' ? '' : 'none'
       }
       if (s.ytUaCustom !== undefined) document.getElementById('yt-ua-custom').value = s.ytUaCustom
+      if (s.theme) loadTheme(s.theme)
     })
 
     ipcRenderer.on('status', (e, data) => {
@@ -887,6 +1047,47 @@
 
     ipcRenderer.send('get-settings')
     ipcRenderer.send('get-profiles')
+
+    const THEMES = {
+      obsidian: {
+        '--bg': '#0d0e10', '--surface': '#131416', '--raised': '#1a1b1e',
+        '--border': '#242528', '--border-subtle': '#1e1f22',
+        '--accent': '#6366f1', '--accent-dim': 'rgba(99,102,241,0.12)',
+        '--text': '#e2e2e8', '--text-muted': '#5a5a70', '--text-secondary': '#9898b0'
+      },
+      studio: {
+        '--bg': '#ede8df', '--surface': '#f5f0e8', '--raised': '#faf7f2',
+        '--border': '#d8d0c4', '--border-subtle': '#e0d8cc',
+        '--accent': '#2c2420', '--accent-dim': 'rgba(44,36,32,0.1)',
+        '--text': '#3a3028', '--text-muted': '#a09080', '--text-secondary': '#6a5e52'
+      },
+      terminal: {
+        '--bg': '#060a0e', '--surface': '#080c10', '--raised': '#0c1420',
+        '--border': '#1a2838', '--border-subtle': '#141c28',
+        '--accent': '#00e57a', '--accent-dim': 'rgba(0,229,122,0.1)',
+        '--text': '#90a8c0', '--text-muted': '#405060', '--text-secondary': '#607080'
+      }
+    }
+
+    function applyTheme(name) {
+      const vars = THEMES[name]
+      if (!vars) return
+      const root = document.documentElement
+      Object.entries(vars).forEach(([k, v]) => root.style.setProperty(k, v))
+      document.querySelectorAll('.theme-card').forEach(c => c.classList.remove('selected'))
+      document.getElementById('theme-' + name)?.classList.add('selected')
+      ipcRenderer.send('save-settings-patch', { theme: name })
+      flashSaved('theme-saved')
+    }
+
+    function loadTheme(name) {
+      if (!name || !THEMES[name]) return
+      const vars = THEMES[name]
+      const root = document.documentElement
+      Object.entries(vars).forEach(([k, v]) => root.style.setProperty(k, v))
+      document.querySelectorAll('.theme-card').forEach(c => c.classList.remove('selected'))
+      document.getElementById('theme-' + name)?.classList.add('selected')
+    }
 
     let currentAppVersion = ''
 
