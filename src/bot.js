@@ -6,9 +6,6 @@ const {
   fetchYtDlpMeta
 } = require('./ytdlp')
 
-// URL du serveur Railway — à mettre dans token.env :
-//   WS_URL=wss://ton-projet.railway.app
-//   WS_SECRET=mot_de_passe_secret  (optionnel mais recommandé)
 const WS_URL    = process.env.WS_URL    || ''
 const WS_SECRET = process.env.WS_SECRET || ''
 
@@ -24,7 +21,6 @@ function buildWsUrl() {
   return url.toString()
 }
 
-// ─── Handlers événements reçus du serveur ───────────────────────────────────
 async function onServerEvent(event, data) {
   const overlay = overlayWinRef
   if (!overlay || overlay.isDestroyed()) return
@@ -86,10 +82,10 @@ async function onServerEvent(event, data) {
   }
 }
 
-// ─── Connexion WebSocket ─────────────────────────────────────────────────────
 function connect() {
   if (destroyed) return
-
+  if (ws && (ws.readyState === 0 || ws.readyState === 1)) return
+  
   const url = buildWsUrl()
   if (!url) {
     console.error('[Bot] WS_URL manquant dans token.env')
@@ -106,6 +102,9 @@ function connect() {
   ws.on('open', () => {
     console.log('[Bot] WebSocket connecté')
     clearTimeout(reconnectTimer)
+    const { getOverlayWindow, getSettingsWindow } = require('./windows')
+    getOverlayWindow()?.webContents.send('status', { ok: true, tag: 'Connecté' })
+    getSettingsWindow()?.webContents.send('status', { ok: true, tag: 'Connecté' })
   })
 
   ws.on('message', (raw) => {
@@ -128,12 +127,11 @@ function connect() {
 
   ws.on('error', (err) => {
     console.error('[Bot] Erreur WebSocket:', err.message)
-    // Le close event va déclencher la reconnexion
   })
 }
 
-// ─── API publique ────────────────────────────────────────────────────────────
 function startBot(channelId, overlayWindow) {
+  destroyBot()
   overlayWinRef = overlayWindow
   destroyed = false
   connect()

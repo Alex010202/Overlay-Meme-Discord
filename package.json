@@ -13,11 +13,13 @@
   "dependencies": {
     "discord.js": "^14.0.0",
     "dotenv": "^16.0.0",
-    "electron-updater": "^6.8.9"
+    "electron-updater": "^6.8.9",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "electron": "^25.9.8",
     "electron-builder": "^26.15.3"
+
   },
   "build": {
     "appId": "com.toi.discord-overlay",
