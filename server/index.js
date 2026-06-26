@@ -5,12 +5,10 @@ const https = require('https')
 const PORT = process.env.PORT || 3000
 const WS_SECRET = process.env.WS_SECRET || ''
 
-// ─── WebSocket server ───────────────────────────────────────────────────────
 const wss = new WebSocketServer({ port: PORT })
 const clients = new Set()
 
 wss.on('connection', (ws, req) => {
-  // Vérifie le secret si défini
   const url = new URL(req.url, `http://localhost`)
   const token = url.searchParams.get('secret')
   if (WS_SECRET && token !== WS_SECRET) {
@@ -46,7 +44,6 @@ function broadcast(event, data) {
   }
 }
 
-// ─── Tenor ──────────────────────────────────────────────────────────────────
 function fetchTenorMp4(tenorPageUrl) {
   return new Promise((resolve) => {
     https.get(tenorPageUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } }, (res) => {
@@ -61,7 +58,6 @@ function fetchTenorMp4(tenorPageUrl) {
   })
 }
 
-// ─── Helpers URL ────────────────────────────────────────────────────────────
 const YTDLP_DOMAINS = [
   'youtube.com', 'youtu.be', 'twitch.tv', 'clips.twitch.tv',
   'reddit.com', 'v.redd.it', 'twitter.com', 'x.com', 'tiktok.com',
@@ -104,7 +100,6 @@ function extractYouTubeId(url) {
   return null
 }
 
-// ─── Parsing pièces jointes ─────────────────────────────────────────────────
 function parseAttachments(message) {
   let attachmentUrl = null, gifIsVideo = false, gifIsLooping = false, audioUrl = null
 
@@ -133,7 +128,6 @@ function parseAttachments(message) {
   return { attachmentUrl, gifIsVideo, gifIsLooping, audioUrl }
 }
 
-// ─── Traitement message ──────────────────────────────────────────────────────
 async function handleMessage(message, currentChannelId) {
   if (message.channel.id !== currentChannelId || message.author.bot) return
 
@@ -248,7 +242,6 @@ async function handleMessage(message, currentChannelId) {
   })
 }
 
-// ─── Bot Discord ─────────────────────────────────────────────────────────────
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
