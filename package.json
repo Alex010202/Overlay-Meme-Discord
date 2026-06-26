@@ -29,6 +29,7 @@
       "overlay.html",
       "settings.html",
       "token.env",
+      "src/**/*",
       "node_modules/**/*"
     ],
 
