@@ -206,6 +206,8 @@ function createYtView({ videoId, x, y, width, height }) {
             const video = document.querySelector('video')
             if (video) video.muted = ${!global.settings.soundEnabled}
           }
+          const endscreen = document.querySelector('.ytp-endscreen-content, .ytp-ce-element')
+          if (endscreen) window.__ytEnded = true
         }, 20)
 
         ${noFs ? `
@@ -235,6 +237,11 @@ function createYtView({ videoId, x, y, width, height }) {
           const video  = document.querySelector('video.html5-main-video')
           if (!player || !video) return false
 
+          if (!video.__endedListener) {
+            video.__endedListener = true
+            video.addEventListener('ended', () => { window.__ytEnded = true })
+          }
+
           if (player.setVolume) player.setVolume(${Math.round((global.settings.soundEnabled ? global.settings.volume : 0) * 100)})
           if (player.unMute && ${global.settings.soundEnabled}) player.unMute()
           if (player.mute   && ${!global.settings.soundEnabled}) player.mute()
@@ -261,6 +268,12 @@ function createYtView({ videoId, x, y, width, height }) {
 
   ytView.webContents.on('did-finish-load', inject)
   ytView.webContents.on('dom-ready', inject)
+
+  ytView.webContents.on('did-navigate-in-page', (e, url) => {
+    if (url.includes('youtube.com/watch')) {
+      overlayWindow?.webContents.send('skip-media')
+    }
+  })
 }
 
 function resizeYtView(bounds) {
