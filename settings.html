@@ -259,7 +259,59 @@
     #version-badge.checking .vb-dot { animation: pulse 1s ease-in-out infinite; }
     @keyframes pulse { 0%,100% { opacity: 0.3; } 50% { opacity: 1; } }
 
-    .custom-ua-row { display: none; margin-top: 8px; }
+    /* ── Sidebar sub items ── */
+    .nav.sub {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 10px 6px 14px; border-radius: 6px;
+      font-size: 11px; font-weight: 500; color: var(--text-muted);
+      cursor: pointer; transition: background 0.12s, color 0.12s;
+      user-select: none;
+    }
+    .nav.sub:hover  { background: var(--raised); color: var(--text-secondary); }
+    .nav.sub.active { background: var(--accent-dim); color: var(--accent); }
+
+    /* ── Draw code box ── */
+    .draw-code-box {
+      background: var(--raised);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+    }
+    .draw-code {
+      font-family: 'Cascadia Code', 'Consolas', monospace;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 6px;
+      color: var(--accent);
+      margin: 10px 0 6px;
+      user-select: all;
+    }
+    .draw-code-hint { font-size: 11px; color: var(--text-muted); }
+
+    .draw-disabled { opacity: 0.4; pointer-events: none; }
+
+    /* ── Peer list ── */
+    .peer-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 14px; border-bottom: 1px solid var(--border-subtle);
+      font-size: 12px; color: var(--text);
+    }
+    .peer-item:last-child { border-bottom: none; }
+    .peer-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+    .empty-peers { padding: 16px; text-align: center; font-size: 12px; color: var(--text-muted); }
+
+    /* ── Draw status indicator ── */
+    .draw-status-banner {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px; border-radius: 8px;
+      font-size: 12px; font-weight: 600;
+      background: var(--raised); border: 1px solid var(--border);
+      margin-bottom: 2px;
+    }
+    .draw-status-banner.active { background: rgba(59,165,93,0.1); border-color: rgba(59,165,93,0.3); color: var(--green); }
+    .draw-status-banner.inactive { color: var(--text-muted); }
+    .draw-status-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
 
     /* ── Thème ── */
     .theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
@@ -333,26 +385,48 @@
 
   <div class="layout">
     <div class="sidebar">
-      <div class="nav active" onclick="showTab('general', this)">
-        <span class="nav-icon"><i class="ti ti-settings"></i></span> Général
+      <!-- Top-level mode tabs -->
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);padding:4px 10px 6px;">Mode</div>
+      <div class="nav active" id="mode-overlay" onclick="switchMode('overlay', this)">
+        <span class="nav-icon"><i class="ti ti-message-2"></i></span> Overlay
       </div>
-      <div class="nav" onclick="showTab('affichage', this)">
-        <span class="nav-icon"><i class="ti ti-layout"></i></span> Affichage
+      <div class="nav" id="mode-dessin" onclick="switchMode('dessin', this)">
+        <span class="nav-icon"><i class="ti ti-pencil"></i></span> Dessin
       </div>
-      <div class="nav" onclick="showTab('son', this)">
-        <span class="nav-icon"><i class="ti ti-volume"></i></span> Son
+
+      <div style="height:1px;background:var(--border-subtle);margin:8px 6px;"></div>
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);padding:4px 10px 6px;" id="sidebar-section-label">Overlay</div>
+
+      <!-- Overlay sub-nav -->
+      <div id="nav-overlay-group">
+        <div class="nav sub active" onclick="showTab('general', this)">
+          <span class="nav-icon"><i class="ti ti-settings"></i></span> Général
+        </div>
+        <div class="nav sub" onclick="showTab('affichage', this)">
+          <span class="nav-icon"><i class="ti ti-layout"></i></span> Affichage
+        </div>
+        <div class="nav sub" onclick="showTab('son', this)">
+          <span class="nav-icon"><i class="ti ti-volume"></i></span> Son
+        </div>
+        <div class="nav sub" onclick="showTab('messages', this)">
+          <span class="nav-icon"><i class="ti ti-message-2"></i></span> Messages
+        </div>
+        <div class="nav sub" onclick="showTab('youtube', this)">
+          <span class="nav-icon"><i class="ti ti-player-play"></i></span> YouTube
+        </div>
+        <div class="nav sub" onclick="showTab('profils', this)">
+          <span class="nav-icon"><i class="ti ti-folder"></i></span> Profils
+        </div>
+        <div class="nav sub" onclick="showTab('theme', this)">
+          <span class="nav-icon"><i class="ti ti-palette"></i></span> Thème
+        </div>
       </div>
-      <div class="nav" onclick="showTab('messages', this)">
-        <span class="nav-icon"><i class="ti ti-message-2"></i></span> Messages
-      </div>
-      <div class="nav" onclick="showTab('youtube', this)">
-        <span class="nav-icon"><i class="ti ti-player-play"></i></span> YouTube
-      </div>
-      <div class="nav" onclick="showTab('profils', this)">
-        <span class="nav-icon"><i class="ti ti-folder"></i></span> Profils
-      </div>
-      <div class="nav" onclick="showTab('theme', this)">
-        <span class="nav-icon"><i class="ti ti-palette"></i></span> Thème
+
+      <!-- Dessin sub-nav -->
+      <div id="nav-dessin-group" style="display:none;">
+        <div class="nav sub active" onclick="showTab('dessin', this)">
+          <span class="nav-icon"><i class="ti ti-pencil"></i></span> Session
+        </div>
       </div>
     </div>
 
@@ -1021,8 +1095,88 @@
         </div>
       </div>
 
-    </div>
-  </div>
+      <!-- DESSIN -->
+      <div class="tab" id="tab-dessin">
+
+        <div class="draw-status-banner inactive" id="draw-banner">
+          <span class="draw-status-dot"></span>
+          <span id="draw-banner-text">Session désactivée</span>
+        </div>
+
+        <div class="card">
+          <div class="card-header">Session de dessin</div>
+          <div class="card-body">
+            <div class="row">
+              <div class="row-left">
+                <div class="row-label">Activer le dessin</div>
+                <div class="row-sub">Ouvre l'overlay de dessin plein écran</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="draw-enabled" onchange="toggleDrawEnabled(this.checked)">
+                <div class="toggle-track"></div>
+              </label>
+            </div>
+            <div class="row">
+              <div class="row-left">
+                <div class="row-label">Partager mon écran</div>
+                <div class="row-sub">Ton pote voit une prévisualisation de ton écran en fond</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="draw-share-screen" onchange="toggleShareScreen(this.checked)" disabled>
+                <div class="toggle-track"></div>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">Code de session</div>
+          <div class="card-body">
+            <div class="row-full">
+              <div class="draw-code-box">
+                <div class="draw-code-hint" style="margin-bottom:4px;">Donne ce code à ton pote</div>
+                <div class="draw-code" id="draw-code-display">——————</div>
+                <div class="draw-code-hint">Il entre ce code pour rejoindre ta session</div>
+                <button class="btn sm ghost" style="margin-top:10px;" onclick="copyDrawCode()" id="draw-copy-btn" disabled>📋 Copier le code</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">Rejoindre une session</div>
+          <div class="card-body">
+            <div class="row-full">
+              <div class="row-sub" style="margin-bottom:6px;">Entre le code de ton pote pour dessiner sur son écran</div>
+              <div class="field-group">
+                <input type="text" id="join-code-input" placeholder="Code (ex: A3F9C2)" maxlength="6"
+                  style="text-transform:uppercase;letter-spacing:3px;font-weight:700;max-width:160px;"
+                  oninput="this.value=this.value.toUpperCase()">
+                <input type="text" id="join-username" placeholder="Ton pseudo" maxlength="20">
+                <button class="btn" onclick="joinDrawSession()">Rejoindre</button>
+              </div>
+              <div class="flash" id="join-flash">✓ Connecté à la session !</div>
+              <div id="join-error" style="font-size:11px;color:var(--red);opacity:0;transition:opacity 0.2s;margin-top:4px;">✗ Code invalide ou session introuvable</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+            Participants connectés
+            <span id="peer-count" style="font-size:11px;color:var(--text-muted);text-transform:none;letter-spacing:normal;font-weight:400;">0 pote(s)</span>
+          </div>
+          <div class="card-body">
+            <div id="peer-list">
+              <div class="empty-peers">Personne n'a encore rejoint</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div><!-- /.content -->
+  </div><!-- /.layout -->
 
   <div id="version-badge" onclick="checkForUpdates()" title="Vérifier les mises à jour">
     <span class="vb-dot"></span>
@@ -1035,11 +1189,43 @@
     function minimizeWindow() { ipcRenderer.send('win-minimize') }
     function closeWindow()    { ipcRenderer.send('win-close') }
 
+    // ── Mode / tab switching ────────────────────────────────────────
+    let currentMode = 'overlay'
+
+    function switchMode(mode, el) {
+      currentMode = mode
+      document.querySelectorAll('[id^="mode-"]').forEach(n => n.classList.remove('active'))
+      el.classList.add('active')
+
+      const overlayGroup = document.getElementById('nav-overlay-group')
+      const dessinGroup  = document.getElementById('nav-dessin-group')
+      const label        = document.getElementById('sidebar-section-label')
+
+      if (mode === 'overlay') {
+        overlayGroup.style.display = ''
+        dessinGroup.style.display  = 'none'
+        label.textContent          = 'Overlay'
+        // Show first overlay tab
+        const firstNav = overlayGroup.querySelector('.nav.sub')
+        showTab('general', firstNav)
+      } else {
+        overlayGroup.style.display = 'none'
+        dessinGroup.style.display  = ''
+        label.textContent          = 'Dessin'
+        const firstNav = dessinGroup.querySelector('.nav.sub')
+        showTab('dessin', firstNav)
+      }
+    }
+
     function showTab(name, el) {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'))
-      document.querySelectorAll('.nav').forEach(n => n.classList.remove('active'))
+      if (currentMode === 'overlay') {
+        document.querySelectorAll('#nav-overlay-group .nav.sub').forEach(n => n.classList.remove('active'))
+      } else {
+        document.querySelectorAll('#nav-dessin-group .nav.sub').forEach(n => n.classList.remove('active'))
+      }
       document.getElementById('tab-' + name).classList.add('active')
-      el.classList.add('active')
+      if (el) el.classList.add('active')
     }
 
     function flashSaved(id) {
@@ -1431,5 +1617,102 @@
       const noFullscreen = document.getElementById('yt-no-fullscreen').checked
       ipcRenderer.send('set-yt-player-settings', { ytQuality: q, ytNoFullscreen: noFullscreen })
     }
+    // ── Draw session ──────────────────────────────────────────────
+
+    let drawCurrentCode = null
+    let drawPeers       = {}
+
+    function toggleDrawEnabled(enabled) {
+      if (enabled) {
+        ipcRenderer.send('draw-enable')
+      } else {
+        ipcRenderer.send('draw-disable')
+        document.getElementById('draw-share-screen').checked  = false
+        document.getElementById('draw-share-screen').disabled = true
+      }
+    }
+
+    function toggleShareScreen(enabled) {
+      ipcRenderer.send('draw-set-share-screen', enabled)
+    }
+
+    function copyDrawCode() {
+      if (!drawCurrentCode) return
+      navigator.clipboard.writeText(drawCurrentCode).catch(() => {})
+      flashSaved('join-flash')
+    }
+
+    function joinDrawSession() {
+      const code     = document.getElementById('join-code-input').value.trim().toUpperCase()
+      const username = document.getElementById('join-username').value.trim() || 'Pote'
+      if (code.length < 4) return
+      ipcRenderer.send('draw-join', { code, username })
+    }
+
+    function updateDrawBanner(enabled, code) {
+      const banner = document.getElementById('draw-banner')
+      const text   = document.getElementById('draw-banner-text')
+      if (enabled) {
+        banner.className = 'draw-status-banner active'
+        text.textContent = `Session active — code: ${code}`
+      } else {
+        banner.className = 'draw-status-banner inactive'
+        text.textContent = 'Session désactivée'
+      }
+    }
+
+    function renderPeerList() {
+      const list  = document.getElementById('peer-list')
+      const count = document.getElementById('peer-count')
+      const peers = Object.values(drawPeers)
+      count.textContent = peers.length + ' pote(s)'
+
+      if (peers.length === 0) {
+        list.innerHTML = '<div class="empty-peers">Personne n\'a encore rejoint</div>'
+        return
+      }
+      list.innerHTML = peers.map(p => `
+        <div class="peer-item">
+          <span class="peer-dot"></span>
+          <span>${p.username || 'Anonyme'}</span>
+        </div>
+      `).join('')
+    }
+
+    ipcRenderer.on('draw-status', (e, { enabled, code, shareScreen }) => {
+      drawCurrentCode = code
+      document.getElementById('draw-enabled').checked        = enabled
+      document.getElementById('draw-share-screen').disabled  = !enabled
+      if (shareScreen !== undefined) document.getElementById('draw-share-screen').checked = shareScreen
+      document.getElementById('draw-code-display').textContent = enabled && code ? code : '——————'
+      document.getElementById('draw-copy-btn').disabled = !enabled
+      if (!enabled) drawPeers = {}
+      renderPeerList()
+      updateDrawBanner(enabled, code)
+    })
+
+    ipcRenderer.on('draw-peer-joined', (e, { peerId, username }) => {
+      drawPeers[peerId] = { peerId, username }
+      renderPeerList()
+    })
+
+    ipcRenderer.on('draw-peer-left', (e, { peerId }) => {
+      delete drawPeers[peerId]
+      renderPeerList()
+    })
+
+    ipcRenderer.on('draw-joined', (e, { ok, error }) => {
+      if (ok) {
+        flashSaved('join-flash')
+        document.getElementById('join-error').style.opacity = '0'
+      } else {
+        document.getElementById('join-error').style.opacity = '1'
+        setTimeout(() => { document.getElementById('join-error').style.opacity = '0' }, 3000)
+      }
+    })
+
+    // Request initial draw status
+    ipcRenderer.send('draw-get-status')
+
   </script>
 </body>

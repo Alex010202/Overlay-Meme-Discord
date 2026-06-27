@@ -10,9 +10,9 @@ const WS_URL    = process.env.WS_URL    || ''
 const WS_SECRET = process.env.WS_SECRET || ''
 
 let ws = null
-let overlayWinRef = null
+let overlayWinRef  = null
 let reconnectTimer = null
-let destroyed = false
+let destroyed      = false
 
 function buildWsUrl() {
   if (!WS_URL) return null
@@ -37,6 +37,92 @@ async function onServerEvent(event, data) {
     return
   }
 
+  // ── Drawing events ──────────────────────────────────────────────
+  if (event === 'draw-joined') {
+    console.log('[Draw] draw-joined reçu du serveur:', data)
+    const { getSettingsWindow, getDrawOverlayWindow, showDrawOverlay } = require('./windows')
+    getSettingsWindow()?.webContents.send('draw-joined', data)
+    if (data.ok) {
+      showDrawOverlay()
+      const drawWin = getDrawOverlayWindow()
+      if (drawWin && !drawWin.isDestroyed()) {
+        // Attendre que la fenêtre soit prête avant d'envoyer les events
+        const send = () => {
+          drawWin.webContents.send('draw-flash', 'Connecté à la session !')
+          drawWin.webContents.send('draw-request-sync', data)
+        }
+        if (drawWin.webContents.isLoading()) {
+          drawWin.webContents.once('did-finish-load', send)
+        } else {
+          send()
+        }
+      }
+    }
+    return
+  }
+
+  if (event === 'draw-closed') {
+    // Host closed the session
+    const { getDrawOverlayWindow, getSettingsWindow, hideDrawOverlay } = require('./windows')
+    getDrawOverlayWindow()?.webContents.send('draw-flash', 'Session terminée par l\'hôte')
+    getSettingsWindow()?.webContents.send('draw-status', { enabled: false, code: null })
+    setTimeout(() => hideDrawOverlay(), 2000) // laisser le flash s'afficher
+    return
+  }
+
+  if (event === 'draw-stroke') {
+    // Relay stroke to the draw overlay window
+    const { getDrawOverlayWindow } = require('./windows')
+    getDrawOverlayWindow()?.webContents.send('draw-remote-stroke', data)
+    return
+  }
+
+  if (event === 'draw-cursor') {
+    const { getDrawOverlayWindow } = require('./windows')
+    getDrawOverlayWindow()?.webContents.send('draw-remote-cursor', data)
+    return
+  }
+
+  if (event === 'draw-screen') {
+    // Peer sent their screen preview (when they are the host and share screen)
+    const { getDrawOverlayWindow, showDrawOverlay } = require('./windows')
+    showDrawOverlay()
+    getDrawOverlayWindow()?.webContents.send('draw-screen-preview', data.dataUrl)
+    return
+  }
+
+  if (event === 'draw-peer-joined') {
+    console.log('[Draw] draw-peer-joined reçu:', data)
+    const { getDrawOverlayWindow, getSettingsWindow } = require('./windows')
+    // L'hôte local envoie son canvas au peer qui vient de rejoindre
+    getDrawOverlayWindow()?.webContents.send('draw-send-sync', data)
+    getDrawOverlayWindow()?.webContents.send('draw-flash', `${data.username || 'Quelqu\'un'} a rejoint le dessin`)
+    getSettingsWindow()?.webContents.send('draw-peer-joined', data)
+    return
+  }
+
+  if (event === 'draw-peer-left') {
+    const { getDrawOverlayWindow, getSettingsWindow } = require('./windows')
+    getDrawOverlayWindow()?.webContents.send('draw-peer-disconnected', data)
+    getSettingsWindow()?.webContents.send('draw-peer-left', data)
+    return
+  }
+
+  if (event === 'draw-full-sync') {
+    // A peer is sending the full canvas state after we requested it
+    const { getDrawOverlayWindow } = require('./windows')
+    getDrawOverlayWindow()?.webContents.send('draw-remote-stroke', { type: 'full-sync', dataUrl: data.dataUrl })
+    return
+  }
+
+  if (event === 'draw-full-sync-request') {
+    // Le serveur demande à l'hôte d'envoyer son canvas complet aux peers
+    const { getDrawOverlayWindow } = require('./windows')
+    getDrawOverlayWindow()?.webContents.send('draw-send-sync', data)
+    return
+  }
+
+  // ── yt-dlp ──────────────────────────────────────────────────────
   if (event === 'ytdlp-needed') {
     const { url, type, content, author, avatar, time } = data
 
@@ -51,11 +137,11 @@ async function onServerEvent(event, data) {
 
       overlay.webContents.send('ytdlp-resolved', {
         loadingUrl: url,
-        videoUrl: filePath ? `file:///${filePath.replace(/\\/g, '/')}` : null,
-        audioUrl: null,
-        title:    meta?.title    || null,
-        thumbnail: meta?.thumbnail || null,
-        duration:  meta?.duration  || null,
+        videoUrl:  filePath ? `file:///${filePath.replace(/\\/g, '/')}` : null,
+        audioUrl:  null,
+        title:     meta?.title      || null,
+        thumbnail: meta?.thumbnail  || null,
+        duration:  meta?.duration   || null,
         uploader:  meta?.uploader || meta?.channel || null,
         sourceUrl: url
       })
@@ -82,10 +168,20 @@ async function onServerEvent(event, data) {
   }
 }
 
+// ─── Send a draw event to the server ────────────────────────────────
+function sendDrawEvent(event, data) {
+  console.log('[Draw] sendDrawEvent:', event, '| WS readyState:', ws ? ws.readyState : 'null')
+  if (ws && ws.readyState === 1) {
+    ws.send(JSON.stringify({ event, data }))
+  } else {
+    console.warn('[Draw] WS pas prêt, event perdu:', event)
+  }
+}
+
 function connect() {
   if (destroyed) return
   if (ws && (ws.readyState === 0 || ws.readyState === 1)) return
-  
+
   const url = buildWsUrl()
   if (!url) {
     console.error('[Bot] WS_URL manquant dans token.env')
@@ -96,7 +192,6 @@ function connect() {
   }
 
   console.log('[Bot] Connexion WebSocket à', WS_URL)
-
   ws = new WebSocket(url)
 
   ws.on('open', () => {
@@ -118,11 +213,9 @@ function connect() {
     }
   })
 
-  ws.on('close', (code, reason) => {
+  ws.on('close', (code) => {
     console.warn(`[Bot] WebSocket fermé (${code}) — reconnexion dans 5s...`)
-    if (!destroyed) {
-      reconnectTimer = setTimeout(connect, 5000)
-    }
+    if (!destroyed) reconnectTimer = setTimeout(connect, 5000)
   })
 
   ws.on('error', (err) => {
@@ -133,7 +226,7 @@ function connect() {
 function startBot(channelId, overlayWindow) {
   destroyBot()
   overlayWinRef = overlayWindow
-  destroyed = false
+  destroyed     = false
   connect()
 }
 
@@ -148,4 +241,4 @@ function destroyBot() {
   }
 }
 
-module.exports = { startBot, destroyBot }
+module.exports = { startBot, destroyBot, sendDrawEvent }

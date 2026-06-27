@@ -3,18 +3,75 @@ const { saveSettings, loadProfiles, saveProfiles } = require('./settings')
 const {
   getOverlayWindow,
   getSettingsWindow,
+  getDrawOverlayWindow,
   getYtView,
   registerHotkeys,
   createYtView,
   resizeYtView,
-  destroyYtView
+  destroyYtView,
+  showDrawOverlay,
+  hideDrawOverlay
 } = require('./windows')
 const { checkForUpdates } = require('./updater')
-const { startBot } = require('./bot')
+const { startBot, sendDrawEvent } = require('./bot')
 
 let overlayNormalBounds = null
 
+// ─── Draw session state ──────────────────────────────────────────────
+let drawEnabled  = false
+let drawCode     = null
+let shareScreen  = false
+let screenTimer  = null
+
+function generateDrawCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  let code = ''
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)]
+  return code
+}
+
+function broadcastDrawToServer(event, data) {
+  sendDrawEvent(event, data)
+}
+
+function startScreenCapture() {
+  if (screenTimer) return
+  captureScreen()
+  screenTimer = setInterval(captureScreen, 500)
+}
+
+function stopScreenCapture() {
+  clearInterval(screenTimer)
+  screenTimer = null
+}
+
+async function captureScreen() {
+  if (!shareScreen || !drawEnabled) return
+  try {
+    const { desktopCapturer, screen: electronScreen } = require('electron')
+    const display = electronScreen.getPrimaryDisplay()
+    const sources = await desktopCapturer.getSources({
+      types: ['screen'],
+      thumbnailSize: {
+        width:  Math.round(display.size.width  / 4),
+        height: Math.round(display.size.height / 4)
+      }
+    })
+    if (!sources.length) return
+    const dataUrl = sources[0].thumbnail.toDataURL()
+    // Send to draw overlay locally
+    getDrawOverlayWindow()?.webContents.send('draw-screen-preview', dataUrl)
+    // Broadcast to peers via server
+    sendDrawEvent('draw-screen', { dataUrl, code: drawCode })
+  } catch (err) {
+    console.error('[Draw] Capture écran erreur:', err.message)
+  }
+}
+
 function setupIpc() {
+
+  // ── Existing IPC ──────────────────────────────────────────────────
+
   ipcMain.on('check-for-updates', () => checkForUpdates())
 
   ipcMain.on('set-channel', (e, channelId) => {
@@ -97,7 +154,7 @@ function setupIpc() {
 
     if (!overlayNormalBounds) overlayNormalBounds = { ...overlay.getBounds() }
 
-    const bounds = overlay.getBounds()
+    const bounds  = overlay.getBounds()
     const display = screen.getDisplayMatching(bounds)
     const workArea = display.workArea
 
@@ -113,8 +170,7 @@ function setupIpc() {
     newW = Math.max(minW, newW)
     newH = Math.max(minH, newH)
 
-    let newX = bounds.x
-    let newY = bounds.y
+    let newX = bounds.x, newY = bounds.y
     if (newX + newW > workArea.x + workArea.width)  newX = workArea.x + workArea.width  - newW
     if (newY + newH > workArea.y + workArea.height) newY = workArea.y + workArea.height - newH
     if (newX < workArea.x) newX = workArea.x
@@ -158,7 +214,7 @@ function setupIpc() {
   })
 
   ipcMain.on('win-minimize', () => getSettingsWindow()?.minimize())
-  ipcMain.on('win-close', () => getSettingsWindow()?.close())
+  ipcMain.on('win-close',    () => getSettingsWindow()?.close())
 
   ipcMain.on('get-profiles', (e) => e.reply('load-profiles', loadProfiles()))
 
@@ -172,7 +228,7 @@ function setupIpc() {
     }
 
     const overlay = getOverlayWindow()
-    const bounds = (overlay && !overlay.isDestroyed())
+    const bounds  = (overlay && !overlay.isDestroyed())
       ? overlay.getBounds()
       : global.settings.overlayBounds
 
@@ -199,17 +255,17 @@ function setupIpc() {
 
     if (overlay && !overlay.isDestroyed()) {
       overlay.setBounds(p.overlayBounds)
-      overlay.webContents.send('set-window-opacity', global.settings.opacity)
-      overlay.webContents.send('set-fontsize', global.settings.fontSize)
-      overlay.webContents.send('set-overlay-bg', global.settings.overlayBg)
-      overlay.webContents.send('set-volume', !!global.settings.soundEnabled, global.settings.soundEnabled ? global.settings.volume : 0)
+      overlay.webContents.send('set-window-opacity',    global.settings.opacity)
+      overlay.webContents.send('set-fontsize',          global.settings.fontSize)
+      overlay.webContents.send('set-overlay-bg',        global.settings.overlayBg)
+      overlay.webContents.send('set-volume',            !!global.settings.soundEnabled, global.settings.soundEnabled ? global.settings.volume : 0)
       overlay.webContents.send('set-durations', {
-        durationText: global.settings.durationText,
-        durationGif: global.settings.durationGif,
+        durationText:  global.settings.durationText,
+        durationGif:   global.settings.durationGif,
         durationVideo: global.settings.durationVideo,
         videoUntilEnd: global.settings.videoUntilEnd
       })
-      overlay.webContents.send('set-dragbar-hidden', !!global.settings.dragbarHidden)
+      overlay.webContents.send('set-dragbar-hidden',    !!global.settings.dragbarHidden)
       overlay.webContents.send('set-auto-resize-media', !!global.settings.autoResizeMedia)
     }
 
@@ -222,17 +278,12 @@ function setupIpc() {
     shell.showItemInFolder(PROFILES_PATH)
   })
 
-  ipcMain.on('yt-view-create', (e, params) => createYtView(params))
-  ipcMain.on('yt-view-resize', (e, bounds) => resizeYtView(bounds))
-  ipcMain.on('yt-view-destroy', () => destroyYtView())
+  ipcMain.on('yt-view-create',  (e, params) => createYtView(params))
+  ipcMain.on('yt-view-resize',  (e, bounds) => resizeYtView(bounds))
+  ipcMain.on('yt-view-destroy', ()           => destroyYtView())
 
-  ipcMain.on('set-yt-settings', (e, patch) => {
-    global.settings = saveSettings(patch)
-  })
-
-  ipcMain.on('save-settings-patch', (e, patch) => {
-    global.settings = saveSettings(patch)
-  })
+  ipcMain.on('set-yt-settings',        (e, patch) => { global.settings = saveSettings(patch) })
+  ipcMain.on('save-settings-patch',    (e, patch) => { global.settings = saveSettings(patch) })
 
   ipcMain.on('set-yt-useragent', (e, patch) => {
     global.settings = saveSettings(patch)
@@ -292,6 +343,70 @@ function setupIpc() {
         }
       })()
     `).catch(err => console.error('IPC yt-live-quality erreur:', err.message))
+  })
+
+  // ── Drawing IPC ───────────────────────────────────────────────────
+
+  ipcMain.on('draw-enable', () => {
+    drawEnabled = true
+    drawCode    = generateDrawCode()
+    console.log('[Draw] Session ouverte, code:', drawCode)
+    sendDrawEvent('draw-open', { code: drawCode })
+    console.log('[Draw] Event draw-open envoyé au serveur')
+    getSettingsWindow()?.webContents.send('draw-status', { enabled: true, code: drawCode })
+  })
+
+  ipcMain.on('draw-disable', () => {
+    drawEnabled = false
+    const oldCode = drawCode
+    drawCode = null
+    stopScreenCapture()
+    shareScreen = false
+    hideDrawOverlay()
+    sendDrawEvent('draw-close', { code: oldCode })
+    getSettingsWindow()?.webContents.send('draw-status', { enabled: false, code: null })
+  })
+
+  ipcMain.on('draw-set-share-screen', (e, enabled) => {
+    shareScreen = enabled
+    if (enabled && drawEnabled) {
+      startScreenCapture()
+    } else {
+      stopScreenCapture()
+      // Tell peers no more screen
+      sendDrawEvent('draw-screen', { dataUrl: null, code: drawCode })
+      getDrawOverlayWindow()?.webContents.send('draw-screen-preview', null)
+    }
+  })
+
+  // Relay draw stroke from the local overlay window → server → peers
+  ipcMain.on('draw-sync', (e, data) => {
+    if (!drawEnabled || !drawCode) return
+    sendDrawEvent('draw-stroke', { ...data, code: drawCode })
+  })
+
+  // Relay cursor position
+  ipcMain.on('draw-cursor', (e, pos) => {
+    if (!drawEnabled || !drawCode) return
+    sendDrawEvent('draw-cursor-move', { ...pos, code: drawCode })
+  })
+
+  // Relay full canvas sync to a new peer
+  ipcMain.on('draw-full-sync', (e, dataUrl) => {
+    if (!drawEnabled || !drawCode) return
+    sendDrawEvent('draw-full-sync', { dataUrl, code: drawCode })
+  })
+
+  // Get current draw state for settings window
+  ipcMain.on('draw-get-status', (e) => {
+    e.reply('draw-status', { enabled: drawEnabled, code: drawCode, shareScreen })
+  })
+
+  // Peer joins from this client's settings window (they are the peer, not the host)
+  ipcMain.on('draw-join', (e, { code, username }) => {
+    console.log('[Draw] Tentative de join room:', code, 'username:', username)
+    sendDrawEvent('draw-join', { code, username })
+    console.log('[Draw] Event draw-join envoyé au serveur')
   })
 }
 

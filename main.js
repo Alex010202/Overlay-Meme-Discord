@@ -5,12 +5,13 @@ require('dotenv').config({ path: path.join(__dirname, 'token.env') })
 Menu.setApplicationMenu(null)
 
 const { loadSettings, saveSettings } = require('./src/settings')
-const { cleanTiktokTmp } = require('./src/ytdlp')
-const { startBot } = require('./src/bot')
-const { setupIpc } = require('./src/ipc')
+const { cleanTiktokTmp }             = require('./src/ytdlp')
+const { startBot }                   = require('./src/bot')
+const { setupIpc }                   = require('./src/ipc')
 const {
   createOverlayWindow,
   createSettingsWindow,
+  createDrawOverlayWindow,
   createTray,
   registerHotkeys,
   getOverlayWindow
@@ -25,6 +26,7 @@ app.whenReady().then(() => {
   const overlay = createOverlayWindow()
   createTray()
   createSettingsWindow()
+  createDrawOverlayWindow()   // ← create (hidden) draw overlay at startup
   setupIpc()
   startBot(global.settings.channelId, overlay, null)
   registerHotkeys()

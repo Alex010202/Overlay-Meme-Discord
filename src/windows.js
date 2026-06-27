@@ -3,8 +3,9 @@ const path = require('path')
 const { loadSettings, saveSettings, loadProfiles } = require('./settings')
 const { app } = require('electron')
 
-let overlayWindow = null
-let settingsWindow = null
+let overlayWindow    = null
+let settingsWindow   = null
+let drawOverlayWindow = null
 let ytView = null
 let tray = null
 
@@ -23,9 +24,10 @@ function getYtUserAgent() {
   return YT_UA_PRESETS[s.ytUaPreset] || YT_UA_PRESETS['chrome-win']
 }
 
-function getOverlayWindow() { return overlayWindow }
-function getSettingsWindow() { return settingsWindow }
-function getYtView() { return ytView }
+function getOverlayWindow()      { return overlayWindow }
+function getSettingsWindow()     { return settingsWindow }
+function getDrawOverlayWindow()  { return drawOverlayWindow }
+function getYtView()             { return ytView }
 
 function createOverlayWindow() {
   const bounds = global.settings.overlayBounds || { width: 360, height: 260, x: 20, y: 20 }
@@ -57,9 +59,9 @@ function createOverlayWindow() {
     { urls: ['*://*.tiktok.com/*', '*://*.tiktokcdn.com/*', '*://*.tiktokv.com/*'] },
     (details, callback) => {
       const headers = { ...details.requestHeaders }
-      headers['Referer'] = 'https://www.tiktok.com/'
+      headers['Referer']    = 'https://www.tiktok.com/'
       headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36'
-      headers['Origin'] = 'https://www.tiktok.com'
+      headers['Origin']     = 'https://www.tiktok.com'
       callback({ requestHeaders: headers })
     }
   )
@@ -72,6 +74,55 @@ function createOverlayWindow() {
   return overlayWindow
 }
 
+// ─── Draw Overlay Window ──────────────────────────────────────────
+function createDrawOverlayWindow() {
+  if (drawOverlayWindow && !drawOverlayWindow.isDestroyed()) return drawOverlayWindow
+
+  const { width, height } = screen.getPrimaryDisplay().bounds
+
+  drawOverlayWindow = new BrowserWindow({
+    width,
+    height,
+    x: 0,
+    y: 0,
+    transparent: true,
+    frame: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    movable: false,
+    fullscreen: false,
+    focusable: true,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+      webSecurity: false
+    }
+  })
+
+  drawOverlayWindow.setAlwaysOnTop(true, 'screen-saver', 1)
+  drawOverlayWindow.setIgnoreMouseEvents(true, { forward: true })
+  drawOverlayWindow.loadFile('draw-overlay.html')
+  drawOverlayWindow.hide() // Hidden until drawing is enabled
+
+  drawOverlayWindow.on('closed', () => {
+    drawOverlayWindow = null
+  })
+
+  return drawOverlayWindow
+}
+
+function showDrawOverlay() {
+  if (!drawOverlayWindow || drawOverlayWindow.isDestroyed()) createDrawOverlayWindow()
+  drawOverlayWindow.show()
+  drawOverlayWindow.setIgnoreMouseEvents(true, { forward: true })
+}
+
+function hideDrawOverlay() {
+  if (drawOverlayWindow && !drawOverlayWindow.isDestroyed()) drawOverlayWindow.hide()
+}
+
+// ─── Settings Window ──────────────────────────────────────────────
 function createSettingsWindow() {
   if (settingsWindow) { settingsWindow.focus(); return }
 
@@ -294,12 +345,17 @@ function destroyYtView() {
 module.exports = {
   getOverlayWindow,
   getSettingsWindow,
+  getDrawOverlayWindow,
   getYtView,
   createOverlayWindow,
   createSettingsWindow,
+  createDrawOverlayWindow,
+  showDrawOverlay,
+  hideDrawOverlay,
   createTray,
   registerHotkeys,
   createYtView,
   resizeYtView,
-  destroyYtView
+  destroyYtView,
+  getYtUserAgent
 }
