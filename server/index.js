@@ -156,6 +156,11 @@ function handleClientEvent(ws, event, data) {
       broadcastToRoom(code, pack('draw-full-sync', data), ws)
       break
     }
+    case 'draw-file': {
+      const { code } = data
+      broadcastToRoom(code, pack('draw-file', data), ws)
+      break
+    }
     default:
       break
   }

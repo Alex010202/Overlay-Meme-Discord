@@ -427,10 +427,10 @@
       <!-- Top-level mode tabs -->
       <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);padding:4px 10px 6px;">Mode</div>
       <div class="nav active" id="mode-overlay" onclick="switchMode('overlay', this)">
-        <span class="nav-icon"><i class="ti ti-message-2"></i></span> Overlay
+        <span class="nav-icon"><i class="ti ti-message-2"></i></span> Overlay Discord
       </div>
       <div class="nav" id="mode-dessin" onclick="switchMode('dessin', this)">
-        <span class="nav-icon"><i class="ti ti-pencil"></i></span> Dessin
+        <span class="nav-icon"><i class="ti ti-screen-share"></i></span> Collaboration
       </div>
 
       <div style="height:1px;background:var(--border-subtle);margin:8px 6px;"></div>
@@ -1149,8 +1149,8 @@
           <div class="card-body">
             <div class="row">
               <div class="row-left">
-                <div class="row-label">Activer le dessin</div>
-                <div class="row-sub">Lance la session de dessin en temps réel</div>
+                <div class="row-label">Activer la collaboration</div>
+                <div class="row-sub">Lance une session de dessin et de partage de fichiers en temps réel</div>
               </div>
               <label class="toggle">
                 <input type="checkbox" id="draw-enabled" onchange="toggleDrawEnabled(this.checked)">
@@ -1229,7 +1229,7 @@
           <div class="card-header">Rejoindre une session</div>
           <div class="card-body">
             <div class="row-full">
-              <div class="row-sub" style="margin-bottom:8px;">Entrez le code d'un autre utilisateur pour dessiner sur son écran</div>
+              <div class="row-sub" style="margin-bottom:8px;">Entrez le code d'un autre utilisateur pour dessiner ou lui envoyer des fichiers sur son écran</div>
               <div style="display:flex;gap:7px;margin-bottom:8px;">
                 <input class="join-code-input" type="text" id="join-code-input" placeholder="A3F9C2" maxlength="6"
                   oninput="this.value=this.value.toUpperCase()">
@@ -1275,14 +1275,14 @@
       if (mode === 'overlay') {
         overlayGroup.style.display = ''
         dessinGroup.style.display  = 'none'
-        label.textContent          = 'Overlay'
+        label.textContent          = 'Overlay Discord'
         // Show first overlay tab
         const firstNav = overlayGroup.querySelector('.nav.sub')
         showTab('general', firstNav)
       } else {
         overlayGroup.style.display = 'none'
         dessinGroup.style.display  = ''
-        label.textContent          = 'Dessin'
+        label.textContent          = 'Collaboration'
         const firstNav = dessinGroup.querySelector('.nav.sub')
         showTab('dessin', firstNav)
       }

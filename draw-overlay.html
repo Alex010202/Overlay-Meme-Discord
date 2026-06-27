@@ -25,29 +25,27 @@
       width: 100vw; height: 100vh;
       user-select: none; -webkit-user-select: none;
       font-family: 'Inter', 'Segoe UI', sans-serif;
+      cursor: crosshair;
     }
 
-    
     #draw-area {
       position: fixed;
-      border-radius: 6px;
+      inset: 0;
       overflow: hidden;
-      box-shadow:
-        0 0 0 1px rgba(124,111,247,0.18),
-        0 0 0 4px rgba(124,111,247,0.04),
-        0 24px 64px rgba(0,0,0,0.8);
-      cursor: crosshair;
-      
     }
 
     #draw-area-label {
-      position: absolute;
-      top: -22px; left: 0;
+      position: fixed;
+      top: 6px; left: 12px;
       font-size: 10px; font-weight: 500;
       letter-spacing: 0.05em; text-transform: uppercase;
       color: var(--dim); white-space: nowrap;
       pointer-events: none;
+      z-index: 100;
+      opacity: 0;
+      transition: opacity 0.2s;
     }
+    body:not(.drawing):hover #draw-area-label { opacity: 1; }
 
     #screen-img {
       position: absolute; top: 0; left: 0;
@@ -56,7 +54,6 @@
       pointer-events: none;
     }
 
-    
     #canvas-bg, #canvas {
       position: absolute; top: 0; left: 0;
       display: block; width: 100%; height: 100%;
@@ -152,7 +149,6 @@
       50%      { opacity: 1;   transform: scale(1.2); }
     }
 
-    
     #toolbar {
       position: fixed;
       top: 12px; left: 50%;
@@ -169,6 +165,13 @@
         0 2px 8px rgba(0,0,0,0.4);
       height: 52px;
       backdrop-filter: blur(16px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s;
+    }
+    body:not(.drawing):not(.file-mode):hover #toolbar {
+      opacity: 1;
+      pointer-events: auto;
     }
 
     .sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; flex-shrink: 0; }
@@ -282,6 +285,122 @@
       letter-spacing:.03em;
     }
     #infobar span { display:flex; align-items:center; gap:4px; }
+
+    
+    #mode-switch {
+      position: fixed;
+      top: 12px; left: 12px;
+      display: flex; align-items: center; gap: 3px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 4px;
+      z-index: 9999;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s;
+    }
+    body:not(.drawing):hover #mode-switch { opacity: 1; pointer-events: auto; }
+    .mode-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 11px;
+      border: none; border-radius: 9px;
+      background: transparent; color: var(--dim);
+      font-family: inherit; font-size: 11px; font-weight: 600;
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s;
+    }
+    .mode-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .mode-btn:hover  { background: var(--surface2); color: var(--text); }
+    .mode-btn.active { background: rgba(124,111,247,0.16); color: var(--accent2); box-shadow: 0 0 0 1px rgba(124,111,247,0.3); }
+
+    
+    #toolbar-file {
+      position: fixed;
+      top: 12px; left: 50%;
+      transform: translateX(-50%);
+      display: none;
+      align-items: center; gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 8px 14px;
+      z-index: 9999;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.025) inset,
+        0 8px 32px rgba(0,0,0,0.75),
+        0 2px 8px rgba(0,0,0,0.4);
+      backdrop-filter: blur(16px);
+    }
+    #toolbar-file.show { display: flex; }
+    .tf-label { font-size: 10px; font-weight: 600; color: var(--dim); white-space: nowrap; }
+    .tf-dur-val { font-size: 11px; font-weight: 700; color: var(--accent2); min-width: 28px; text-align: right; }
+    #tf-duration { width: 90px; }
+    .tf-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 13px;
+      border: none; border-radius: 9px;
+      font-family: inherit; font-size: 11px; font-weight: 600;
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s, opacity .12s;
+    }
+    .tf-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .tf-btn.primary { background: var(--accent); color: white; }
+    .tf-btn.primary:hover:not(:disabled) { background: var(--accent2); }
+    .tf-btn.primary:disabled { opacity: 0.3; cursor: default; }
+    .tf-btn.ghost { background: var(--surface2); color: var(--text); }
+    .tf-btn.ghost:hover { background: var(--surface3); }
+
+    
+    #file-dropzone {
+      position: absolute; inset: 0;
+      display: none;
+      flex-direction: column; align-items: center; justify-content: center;
+      gap: 12px;
+      z-index: 3;
+      cursor: pointer;
+    }
+    body.file-mode:not(.has-file-preview) #file-dropzone { display: flex; }
+    #file-dropzone.drag-over { background: rgba(124,111,247,0.06); }
+    .fd-icon {
+      width: 52px; height: 52px; border-radius: 14px;
+      background: var(--surface2); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      pointer-events: none;
+    }
+    .fd-icon svg { width: 24px; height: 24px; stroke: var(--accent2); fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+    .fd-title { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.55); pointer-events: none; }
+    .fd-sub { font-size: 11px; color: var(--dim); pointer-events: none; }
+
+    
+    #file-preview-box {
+      position: absolute;
+      display: none;
+      border: 2px solid var(--accent2);
+      border-radius: 6px;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.6);
+      z-index: 4;
+      cursor: grab;
+    }
+    body.file-mode.has-file-preview #file-preview-box { display: block; }
+    #file-preview-box img { width: 100%; height: 100%; object-fit: contain; border-radius: 4px; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+    #file-preview-box.dragging { cursor: grabbing; }
+    .fpb-handle {
+      position: absolute; width: 13px; height: 13px;
+      background: var(--accent2); border: 2px solid var(--surface);
+      border-radius: 50%; cursor: nwse-resize;
+      right: -7px; bottom: -7px;
+    }
+    .fpb-remove {
+      position: absolute; top: -11px; right: -11px;
+      width: 22px; height: 22px; border-radius: 50%;
+      background: var(--danger); color: white;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; border: 2px solid var(--surface);
+      font-size: 13px; line-height: 1;
+    }
   </style>
 </head>
 <body>
@@ -291,6 +410,23 @@
   <canvas id="canvas-bg"></canvas>
   <img id="screen-img" alt="">
   <canvas id="canvas"></canvas>
+
+  
+  <div id="file-dropzone" onclick="browseFile()">
+    <div class="fd-icon">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+    </div>
+    <div class="fd-title">Dépose une image ici</div>
+    <div class="fd-sub">ou clique pour parcourir — elle s'affichera sur l'écran de ton pote</div>
+  </div>
+  <input type="file" id="file-input" accept="image/*" style="display:none" onchange="onFileInputChange(event)">
+
+  
+  <div id="file-preview-box">
+    <img id="file-preview-img" alt="">
+    <div class="fpb-remove" onclick="cancelFilePreview(event)">✕</div>
+    <div class="fpb-handle" onmousedown="startResizePreview(event)"></div>
+  </div>
 
   
   <div id="empty-state">
@@ -314,8 +450,22 @@
         <div class="es-dot"></div>
         En attente de connexion…
       </div>
+      <div class="es-title" style="font-size:11px;font-weight:500;color:var(--dim);">
+        Astuce : glisse une image n'importe où pour l'envoyer à ton pote
+      </div>
     </div>
   </div>
+</div>
+
+<div id="mode-switch">
+  <button class="mode-btn active" id="mode-btn-draw" onclick="switchMode('draw')">
+    <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+    Dessin
+  </button>
+  <button class="mode-btn" id="mode-btn-file" onclick="switchMode('file')">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+    Fichier
+  </button>
 </div>
 
 <div id="toolbar">
@@ -385,6 +535,21 @@
   </button>
 </div>
 
+<div id="toolbar-file">
+  <span class="tf-label">Disparaît après</span>
+  <input type="range" id="tf-duration" min="1" max="30" value="5">
+  <span class="tf-dur-val" id="tf-duration-val">5s</span>
+  <div class="sep"></div>
+  <button class="tf-btn ghost" id="tf-cancel" onclick="cancelFilePreview()">
+    <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    Annuler
+  </button>
+  <button class="tf-btn primary" id="tf-send" onclick="sendFilePreview()" disabled>
+    <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    Envoyer
+  </button>
+</div>
+
 <div id="flash"></div>
 <div id="infobar">
   <span id="info-res"></span>
@@ -427,7 +592,7 @@ function undo() {
   updateHistoryUI()
   checkEmptyState()
   flash('↩ Annulé')
-  ipcRenderer.send('draw-sync', { type: 'undo', dataUrl: canvas.toDataURL('image/jpeg', 0.7) })
+  ipcRenderer.send('draw-sync', { type: 'undo', dataUrl: canvas.toDataURL() })
 }
 function redo() {
   if (redoStack.length === 0) return
@@ -437,7 +602,7 @@ function redo() {
   updateHistoryUI()
   checkEmptyState()
   flash('↪ Rétabli')
-  ipcRenderer.send('draw-sync', { type: 'undo', dataUrl: canvas.toDataURL('image/jpeg', 0.7) })
+  ipcRenderer.send('draw-sync', { type: 'undo', dataUrl: canvas.toDataURL() })
 }
 function updateHistoryUI() {
   document.getElementById('btn-undo').disabled = undoStack.length === 0
@@ -469,16 +634,10 @@ function drawBg() {
   }
 }
 function layoutDrawArea() {
-  const winW = window.innerWidth, winH = window.innerHeight
-  const toolbarH = 68
-  const availW = winW - MARGIN * 2
-  const availH = winH - MARGIN * 2 - toolbarH
-  const scale  = Math.min(availW / CANVAS_W, availH / CANVAS_H)
-  areaW = Math.round(CANVAS_W * scale)
-  areaH = Math.round(CANVAS_H * scale)
-  areaX = Math.round((winW - areaW) / 2)
-  areaY = Math.round(toolbarH + MARGIN + (availH - areaH) / 2)
-  drawArea.style.cssText += `left:${areaX}px;top:${areaY}px;width:${areaW}px;height:${areaH}px;`
+  areaW = window.innerWidth
+  areaH = window.innerHeight
+  areaX = 0
+  areaY = 0
   const snap = (canvas.width > 0 && !isCanvasBlank()) ? captureState() : null
   canvas.width  = CANVAS_W
   canvas.height = CANVAS_H
@@ -501,11 +660,22 @@ function isCanvasBlank() {
 }
 function checkEmptyState() {
   const blank = isCanvasBlank() && screenImg.style.display === 'none'
-  emptyState.classList.toggle('hidden', !blank)
+  emptyState.classList.toggle('hidden', !blank || currentMode === 'file')
 }
 window.addEventListener('resize', layoutDrawArea)
 layoutDrawArea()
 updateHistoryUI()
+
+let currentMode = 'draw'
+function switchMode(mode) {
+  currentMode = mode
+  document.body.classList.toggle('file-mode', mode === 'file')
+  document.getElementById('mode-btn-draw').classList.toggle('active', mode === 'draw')
+  document.getElementById('mode-btn-file').classList.toggle('active', mode === 'file')
+  document.getElementById('toolbar-file').classList.toggle('show', mode === 'file')
+  drawArea.style.cursor = mode === 'file' ? 'default' : (currentTool === 'eraser' ? 'cell' : 'crosshair')
+  checkEmptyState()
+}
 
 let currentTool  = 'pen'
 let currentColor = '#ff4455'
@@ -593,9 +763,11 @@ function isOnToolbar(e) {
   return toolbar.contains(e.target)
 }
 window.addEventListener('mousedown', e => {
+  if (currentMode !== 'draw') return
   if (isOnToolbar(e)) return
   e.preventDefault()
   isDrawing = true
+  document.body.classList.add('drawing')
   const p = toCanvasClamped(e.clientX, e.clientY)
   lastX = p.x; lastY = p.y; startX = p.x; startY = p.y
   saveSnapshot()
@@ -607,6 +779,7 @@ window.addEventListener('mousedown', e => {
 })
 let _lastCursorSend = 0
 window.addEventListener('mousemove', e => {
+  if (currentMode !== 'draw') return
   const p = toCanvasClamped(e.clientX, e.clientY)
   const now = Date.now()
   if (now - _lastCursorSend >= 50) {
@@ -634,8 +807,10 @@ window.addEventListener('mousemove', e => {
   }
 })
 window.addEventListener('mouseup', e => {
+  if (currentMode !== 'draw') return
   if (!isDrawing) return
   isDrawing = false
+  document.body.classList.remove('drawing')
   const p = toCanvasClamped(e.clientX, e.clientY)
   if (['line','rect','circle','arrow'].includes(currentTool) && previewSnap) {
     commitShape(p)
@@ -718,10 +893,158 @@ function flash(msg) {
   _ft=setTimeout(()=>el.classList.remove('show'),1800)
 }
 
+const fileDropzone   = document.getElementById('file-dropzone')
+const filePreviewBox = document.getElementById('file-preview-box')
+const filePreviewImg = document.getElementById('file-preview-img')
+const fileInput      = document.getElementById('file-input')
+const durationSlider = document.getElementById('tf-duration')
+const durationVal    = document.getElementById('tf-duration-val')
+const btnSend        = document.getElementById('tf-send')
+
+let pendingFileDataUrl = null
+let fileDurationMs     = 5000
+
+durationSlider.addEventListener('input', () => {
+  fileDurationMs = parseInt(durationSlider.value, 10) * 1000
+  durationVal.textContent = durationSlider.value + 's'
+})
+
+function browseFile() { fileInput.click() }
+function onFileInputChange(e) {
+  const f = e.target.files && e.target.files[0]
+  if (f) loadFileAsPreview(f)
+  fileInput.value = ''
+}
+
+function loadFileAsPreview(file) {
+  if (!file || !file.type.startsWith('image/')) {
+    flash('Seules les images sont supportées')
+    return
+  }
+  const reader = new FileReader()
+  reader.onload = () => {
+    pendingFileDataUrl = reader.result
+    filePreviewImg.src = pendingFileDataUrl
+    const img = new Image()
+    img.onload = () => placeDefaultPreview(img.naturalWidth, img.naturalHeight)
+    img.src = pendingFileDataUrl
+    switchMode('file')
+    document.body.classList.add('has-file-preview')
+    btnSend.disabled = false
+  }
+  reader.readAsDataURL(file)
+}
+
+function placeDefaultPreview(naturalW, naturalH) {
+  const ratio  = naturalW / naturalH || 1
+  let w = Math.min(areaW * 0.32, 420)
+  let h = w / ratio
+  if (h > areaH * 0.6) { h = areaH * 0.6; w = h * ratio }
+  const left = (areaW - w) / 2
+  const top  = (areaH - h) / 2
+  setPreviewRect(left, top, w, h)
+}
+
+function setPreviewRect(left, top, w, h) {
+  const minSize = 40
+  w = Math.max(minSize, Math.min(w, areaW))
+  h = Math.max(minSize, Math.min(h, areaH))
+  left = Math.max(0, Math.min(left, areaW - w))
+  top  = Math.max(0, Math.min(top,  areaH - h))
+  filePreviewBox.style.left   = left + 'px'
+  filePreviewBox.style.top    = top  + 'px'
+  filePreviewBox.style.width  = w    + 'px'
+  filePreviewBox.style.height = h    + 'px'
+}
+
+function cancelFilePreview(e) {
+  if (e) e.stopPropagation()
+  pendingFileDataUrl = null
+  filePreviewImg.src = ''
+  document.body.classList.remove('has-file-preview')
+  btnSend.disabled = true
+  checkEmptyState()
+}
+
+function sendFilePreview() {
+  if (!pendingFileDataUrl) return
+  const rect = {
+    x: filePreviewBox.offsetLeft / areaW,
+    y: filePreviewBox.offsetTop  / areaH,
+    width:  filePreviewBox.offsetWidth  / areaW,
+    height: filePreviewBox.offsetHeight / areaH
+  }
+  ipcRenderer.send('draw-file-send', { ...rect, dataUrl: pendingFileDataUrl, duration: fileDurationMs })
+  flash(`Envoyé — disparaît dans ${Math.round(fileDurationMs/1000)}s`)
+  cancelFilePreview()
+}
+
+let movingPreview = false, moveOffX = 0, moveOffY = 0
+filePreviewBox.addEventListener('mousedown', e => {
+  if (e.target.classList.contains('fpb-handle') || e.target.classList.contains('fpb-remove')) return
+  movingPreview = true
+  filePreviewBox.classList.add('dragging')
+  moveOffX = e.clientX - filePreviewBox.offsetLeft
+  moveOffY = e.clientY - filePreviewBox.offsetTop
+  e.preventDefault()
+})
+
+let resizingPreview = false
+function startResizePreview(e) {
+  resizingPreview = true
+  e.preventDefault()
+  e.stopPropagation()
+}
+
+window.addEventListener('mousemove', e => {
+  if (movingPreview) {
+    setPreviewRect(e.clientX - moveOffX, e.clientY - moveOffY,
+      filePreviewBox.offsetWidth, filePreviewBox.offsetHeight)
+  } else if (resizingPreview) {
+    const w = e.clientX - filePreviewBox.offsetLeft
+    const h = e.clientY - filePreviewBox.offsetTop
+    setPreviewRect(filePreviewBox.offsetLeft, filePreviewBox.offsetTop, w, h)
+  }
+})
+window.addEventListener('mouseup', () => {
+  movingPreview = false
+  resizingPreview = false
+  filePreviewBox.classList.remove('dragging')
+})
+
+window.addEventListener('dragover', e => {
+  e.preventDefault()
+  if (!document.body.classList.contains('has-file-preview')) fileDropzone.classList.add('drag-over')
+})
+window.addEventListener('dragleave', e => {
+  fileDropzone.classList.remove('drag-over')
+})
+window.addEventListener('drop', e => {
+  e.preventDefault()
+  fileDropzone.classList.remove('drag-over')
+  const f = e.dataTransfer.files && e.dataTransfer.files[0]
+  if (f) loadFileAsPreview(f)
+})
+window.addEventListener('paste', e => {
+  const items = e.clipboardData && e.clipboardData.items
+  if (!items) return
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      const f = item.getAsFile()
+      if (f) loadFileAsPreview(f)
+      break
+    }
+  }
+})
+
 document.addEventListener('keydown', e => {
   if ((e.ctrlKey||e.metaKey) && e.key==='z') { e.preventDefault(); undo(); return }
   if ((e.ctrlKey||e.metaKey) && (e.key==='y'||(e.shiftKey&&e.key==='z'))) { e.preventDefault(); redo(); return }
   if (e.ctrlKey||e.metaKey||e.altKey) return
+  if (currentMode === 'file') {
+    if (e.key === 'Escape' || e.key === 'Delete') cancelFilePreview()
+    return
+  }
   const km={p:'pen',l:'line',r:'rect',c:'circle',a:'arrow',e:'eraser'}
   if (km[e.key]) setTool(km[e.key])
 })
@@ -736,7 +1059,7 @@ ipcRenderer.on('draw-screen-preview', (_,dataUrl)=>{
   else{screenImg.style.display='none';screenImg.src='';checkEmptyState()}
 })
 ipcRenderer.on('draw-request-sync',  ()=>ipcRenderer.send('draw-full-sync-request'))
-ipcRenderer.on('draw-send-sync',     ()=>ipcRenderer.send('draw-full-sync', canvas.toDataURL('image/jpeg', 0.7)))
+ipcRenderer.on('draw-send-sync',     ()=>ipcRenderer.send('draw-full-sync', canvas.toDataURL()))
 ipcRenderer.on('draw-flash',         (_,msg)=>flash(msg))
 ipcRenderer.on('draw-host-screen-size', (_,{width,height,isPeer})=>{
   const label=isPeer?`Écran de ton pote — ${width}×${height}`:`Mon écran — ${width}×${height}`

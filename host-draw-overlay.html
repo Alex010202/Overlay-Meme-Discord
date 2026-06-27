@@ -17,10 +17,10 @@
 </head>
 <body>
 <canvas id="canvas"></canvas>
+<div id="file-layer" style="position:fixed;inset:0;pointer-events:none;z-index:5;"></div>
 <script>
 const { ipcRenderer } = require('electron')
 
-// ── Canvas pour les dessins du peer ─────────────────────────────────
 const canvas = document.getElementById('canvas')
 const ctx    = canvas.getContext('2d')
 
@@ -36,7 +36,6 @@ window.addEventListener('resize', () => {
   img.src = snapshot
 })
 
-// ── Draw primitives ──────────────────────────────────────────────────
 function drawLine(x0, y0, x1, y1, color, size) {
   ctx.beginPath()
   ctx.strokeStyle = color
@@ -109,11 +108,73 @@ function applyStroke(data) {
 }
 
 ipcRenderer.on('draw-remote-stroke', (e, data) => applyStroke(data))
-ipcRenderer.on('draw-clear', () => ctx.clearRect(0, 0, canvas.width, canvas.height))
+ipcRenderer.on('draw-clear', () => { ctx.clearRect(0, 0, canvas.width, canvas.height); clearAllFiles() })
 
-// ── Capture écran via getUserMedia (renderer) ────────────────────────
-// Le main process récupère le sourceId une fois via desktopCapturer,
-// puis le renderer fait la boucle avec getUserMedia — hors main thread.
+const fileLayer  = document.getElementById('file-layer')
+const activeFiles = new Map()
+
+function showRemoteFile(data) {
+  const { id, dataUrl, x, y, width, height, duration } = data
+  if (!dataUrl || !id) return
+  const W = window.innerWidth
+  const H = window.innerHeight
+
+  const img = document.createElement('img')
+  img.src = dataUrl
+  img.dataset.relX = x
+  img.dataset.relY = y
+  img.dataset.relW = width
+  img.dataset.relH = height
+  img.style.position      = 'absolute'
+  img.style.left          = (x * W) + 'px'
+  img.style.top           = (y * H) + 'px'
+  img.style.width         = (width  * W) + 'px'
+  img.style.height        = (height * H) + 'px'
+  img.style.borderRadius  = '8px'
+  img.style.boxShadow     = '0 10px 36px rgba(0,0,0,0.55)'
+  img.style.opacity       = '0'
+  img.style.transform     = 'scale(0.96)'
+  img.style.transition    = 'opacity .25s ease, transform .25s ease'
+  img.style.objectFit     = 'contain'
+
+  fileLayer.appendChild(img)
+  requestAnimationFrame(() => {
+    img.style.opacity   = '1'
+    img.style.transform = 'scale(1)'
+  })
+
+  const dur   = Math.max(500, duration || 5000)
+  const timer = setTimeout(() => removeFile(id), dur)
+  activeFiles.set(id, { img, timer })
+}
+
+function removeFile(id) {
+  const entry = activeFiles.get(id)
+  if (!entry) return
+  clearTimeout(entry.timer)
+  entry.img.style.opacity   = '0'
+  entry.img.style.transform = 'scale(0.96)'
+  setTimeout(() => entry.img.remove(), 280)
+  activeFiles.delete(id)
+}
+
+function clearAllFiles() {
+  for (const id of Array.from(activeFiles.keys())) removeFile(id)
+}
+
+window.addEventListener('resize', () => {
+  const W = window.innerWidth
+  const H = window.innerHeight
+  for (const { img } of activeFiles.values()) {
+    img.style.left   = (parseFloat(img.dataset.relX) * W) + 'px'
+    img.style.top    = (parseFloat(img.dataset.relY) * H) + 'px'
+    img.style.width  = (parseFloat(img.dataset.relW) * W) + 'px'
+    img.style.height = (parseFloat(img.dataset.relH) * H) + 'px'
+  }
+})
+
+ipcRenderer.on('draw-file-show', (e, data) => showRemoteFile(data))
+
 let captureStream   = null
 let captureInterval = null
 let captureCanvas   = null
@@ -154,8 +215,6 @@ async function startCapture({ sourceId, capW, capH, fps, quality }) {
       if (capturePending || !video.videoWidth) return
       capturePending = true
       try {
-        // setContentProtection(true) sur hostDrawOverlay exclut la fenêtre
-        // de la capture — les dessins du peer n'apparaissent jamais dans la frame.
         captureCtx.drawImage(video, 0, 0, capW, capH)
         const dataUrl = captureCanvas.toDataURL('image/jpeg', quality)
         ipcRenderer.send('capture-frame', dataUrl)

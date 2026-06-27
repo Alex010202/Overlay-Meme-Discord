@@ -419,6 +419,17 @@ function setupIpc() {
     if (!getActiveDrawCode()) return
     getDrawOverlayWindow()?.webContents.send('draw-send-sync', {})
   })
+  ipcMain.on('draw-file-send', (e, data) => {
+    const activeCode = getActiveDrawCode()
+    if (!activeCode) return
+    const payload = {
+      ...data,
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    }
+    showHostDrawOverlay()
+    getHostDrawOverlay()?.webContents.send('draw-file-show', payload)
+    sendDrawEvent('draw-file', { ...payload, code: activeCode })
+  })
   ipcMain.on('draw-get-status', (e) => {
     e.reply('draw-status', { enabled: drawEnabled, code: drawCode, shareScreen })
   })

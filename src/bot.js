@@ -108,6 +108,12 @@ async function onServerEvent(event, data) {
     getDrawOverlayWindow()?.webContents.send('draw-remote-stroke', { type: 'full-sync', dataUrl: data.dataUrl })
     return
   }
+  if (event === 'draw-file') {
+    const { getHostDrawOverlay, showHostDrawOverlay } = require('./windows')
+    showHostDrawOverlay()
+    getHostDrawOverlay()?.webContents.send('draw-file-show', data)
+    return
+  }
   if (event === 'draw-full-sync-request') {
     const { getDrawOverlayWindow } = require('./windows')
     getDrawOverlayWindow()?.webContents.send('draw-send-sync', data)
