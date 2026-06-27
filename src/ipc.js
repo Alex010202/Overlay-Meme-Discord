@@ -17,7 +17,7 @@ const {
   hideDrawOverlay
 } = require('./windows')
 const { checkForUpdates } = require('./updater')
-const { startBot, sendDrawEvent } = require('./bot')
+const { startBot, sendDrawEvent, setActiveDrawCode } = require('./bot')
 
 let overlayNormalBounds = null
 
@@ -357,10 +357,10 @@ function setupIpc() {
     const { screen } = require('electron')
     const { width, height } = screen.getPrimaryDisplay().size
     console.log('[Draw] Session ouverte, code:', drawCode)
+    setActiveDrawCode(drawCode)   // ← mémoriser pour re-envoyer après reconnexion WS
     sendDrawEvent('draw-open', { code: drawCode, hostScreen: { width, height } })
     console.log('[Draw] Event draw-open envoyé au serveur')
     getSettingsWindow()?.webContents.send('draw-status', { enabled: true, code: drawCode })
-    // Pré-créer l'overlay transparent de l'hôte (caché jusqu'à ce qu'un peer dessine)
     createHostDrawOverlay()
   })
 
@@ -368,6 +368,7 @@ function setupIpc() {
     drawEnabled = false
     const oldCode = drawCode
     drawCode = null
+    setActiveDrawCode(null)   // ← plus de session active
     stopScreenCapture()
     shareScreen = false
     hideDrawOverlay()
