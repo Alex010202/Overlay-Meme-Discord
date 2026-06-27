@@ -43,14 +43,16 @@ async function onServerEvent(event, data) {
     const { getSettingsWindow, getDrawOverlayWindow, showDrawOverlay } = require('./windows')
     getSettingsWindow()?.webContents.send('draw-joined', data)
     if (data.ok) {
-      showDrawOverlay()
+      const hw = data.hostScreen?.width
+      const hh = data.hostScreen?.height
+      showDrawOverlay(hw, hh)
       const drawWin = getDrawOverlayWindow()
       if (drawWin && !drawWin.isDestroyed()) {
         const send = () => {
           drawWin.webContents.send('draw-flash', 'Connecté à la session !')
           drawWin.webContents.send('draw-request-sync', data)
           if (data.hostScreen) {
-            drawWin.webContents.send('draw-host-screen-size', data.hostScreen)
+            drawWin.webContents.send('draw-host-screen-size', { ...data.hostScreen, isPeer: true })
           }
         }
         if (drawWin.webContents.isLoading()) {
@@ -65,17 +67,21 @@ async function onServerEvent(event, data) {
 
   if (event === 'draw-closed') {
     // Host closed the session
-    const { getDrawOverlayWindow, getSettingsWindow, hideDrawOverlay } = require('./windows')
+    const { getDrawOverlayWindow, getSettingsWindow, hideDrawOverlay, hideHostDrawOverlay, getHostDrawOverlay } = require('./windows')
     getDrawOverlayWindow()?.webContents.send('draw-flash', 'Session terminée par l\'hôte')
+    getHostDrawOverlay()?.webContents.send('draw-clear')
     getSettingsWindow()?.webContents.send('draw-status', { enabled: false, code: null })
-    setTimeout(() => hideDrawOverlay(), 2000) // laisser le flash s'afficher
+    setTimeout(() => { hideDrawOverlay(); hideHostDrawOverlay() }, 2000)
     return
   }
 
   if (event === 'draw-stroke') {
-    // Relay stroke to the draw overlay window
-    const { getDrawOverlayWindow } = require('./windows')
+    // Relay stroke to the draw overlay window (peer side)
+    const { getDrawOverlayWindow, getHostDrawOverlay, showHostDrawOverlay } = require('./windows')
     getDrawOverlayWindow()?.webContents.send('draw-remote-stroke', data)
+    // Also relay to host's transparent overlay so host sees peer drawings on their screen
+    showHostDrawOverlay()
+    getHostDrawOverlay()?.webContents.send('draw-remote-stroke', data)
     return
   }
 

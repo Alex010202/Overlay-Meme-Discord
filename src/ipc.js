@@ -4,11 +4,15 @@ const {
   getOverlayWindow,
   getSettingsWindow,
   getDrawOverlayWindow,
+  getHostDrawOverlay,
   getYtView,
   registerHotkeys,
   createYtView,
   resizeYtView,
   destroyYtView,
+  createHostDrawOverlay,
+  showHostDrawOverlay,
+  hideHostDrawOverlay,
   showDrawOverlay,
   hideDrawOverlay
 } = require('./windows')
@@ -356,6 +360,8 @@ function setupIpc() {
     sendDrawEvent('draw-open', { code: drawCode, hostScreen: { width, height } })
     console.log('[Draw] Event draw-open envoyé au serveur')
     getSettingsWindow()?.webContents.send('draw-status', { enabled: true, code: drawCode })
+    // Pré-créer l'overlay transparent de l'hôte (caché jusqu'à ce qu'un peer dessine)
+    createHostDrawOverlay()
   })
 
   ipcMain.on('draw-disable', () => {
@@ -365,6 +371,7 @@ function setupIpc() {
     stopScreenCapture()
     shareScreen = false
     hideDrawOverlay()
+    hideHostDrawOverlay()
     sendDrawEvent('draw-close', { code: oldCode })
     getSettingsWindow()?.webContents.send('draw-status', { enabled: false, code: null })
   })
@@ -397,6 +404,12 @@ function setupIpc() {
   ipcMain.on('draw-full-sync', (e, dataUrl) => {
     if (!drawEnabled || !drawCode) return
     sendDrawEvent('draw-full-sync', { dataUrl, code: drawCode })
+  })
+
+  // Peer requests a full sync from the host canvas → ask the host's draw overlay to send its canvas
+  ipcMain.on('draw-full-sync-request', () => {
+    if (!drawEnabled || !drawCode) return
+    getDrawOverlayWindow()?.webContents.send('draw-send-sync', {})
   })
 
   // Get current draw state for settings window

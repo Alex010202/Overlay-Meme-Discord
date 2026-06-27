@@ -28,6 +28,8 @@
       "main.js",
       "overlay.html",
       "settings.html",
+      "draw-overlay.html",
+      "host-draw-overlay.html",
       "token.env",
       "src/**/*",
       "node_modules/**/*"
@@ -57,4 +59,3 @@
     }
   }
 }
-

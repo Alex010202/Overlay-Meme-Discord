@@ -12,6 +12,7 @@ const {
   createOverlayWindow,
   createSettingsWindow,
   createDrawOverlayWindow,
+  createHostDrawOverlay,
   createTray,
   registerHotkeys,
   getOverlayWindow
@@ -26,7 +27,8 @@ app.whenReady().then(() => {
   const overlay = createOverlayWindow()
   createTray()
   createSettingsWindow()
-  createDrawOverlayWindow()   // ← create (hidden) draw overlay at startup
+  createDrawOverlayWindow()   // ← fenêtre de dessin pour le peer (cachée)
+  createHostDrawOverlay()     // ← overlay transparent pour l'hôte (caché)
   setupIpc()
   startBot(global.settings.channelId, overlay, null)
   registerHotkeys()
