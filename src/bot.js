@@ -46,10 +46,12 @@ async function onServerEvent(event, data) {
       showDrawOverlay()
       const drawWin = getDrawOverlayWindow()
       if (drawWin && !drawWin.isDestroyed()) {
-        // Attendre que la fenêtre soit prête avant d'envoyer les events
         const send = () => {
           drawWin.webContents.send('draw-flash', 'Connecté à la session !')
           drawWin.webContents.send('draw-request-sync', data)
+          if (data.hostScreen) {
+            drawWin.webContents.send('draw-host-screen-size', data.hostScreen)
+          }
         }
         if (drawWin.webContents.isLoading()) {
           drawWin.webContents.once('did-finish-load', send)
@@ -84,7 +86,7 @@ async function onServerEvent(event, data) {
   }
 
   if (event === 'draw-screen') {
-    // Peer sent their screen preview (when they are the host and share screen)
+    console.log('[Draw] draw-screen reçu, dataUrl:', data.dataUrl ? data.dataUrl.slice(0, 50) + '...' : 'NULL')
     const { getDrawOverlayWindow, showDrawOverlay } = require('./windows')
     showDrawOverlay()
     getDrawOverlayWindow()?.webContents.send('draw-screen-preview', data.dataUrl)

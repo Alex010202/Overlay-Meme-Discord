@@ -154,12 +154,39 @@
       z-index: 99999;
     }
     #flash.show { opacity: 1; }
+
+    /* Cadre résolution hôte */
+    #host-frame {
+      position: fixed;
+      pointer-events: none;
+      z-index: 2;
+      border: 1.5px dashed rgba(88,101,242,0.6);
+      display: none;
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.4);
+    }
+    #host-frame.active { display: block; }
+    #host-frame-label {
+      position: absolute;
+      top: -22px;
+      left: 0;
+      font-size: 11px;
+      font-family: 'Segoe UI', sans-serif;
+      color: rgba(88,101,242,1);
+      background: rgba(13,14,16,0.9);
+      padding: 2px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
   </style>
 </head>
 <body>
 
 <div id="screen-preview">
   <img id="screen-img" src="" alt="">
+</div>
+
+<div id="host-frame">
+  <span id="host-frame-label"></span>
 </div>
 
 <canvas id="canvas"></canvas>
@@ -479,6 +506,33 @@ function flash(msg) {
   setTimeout(() => el.classList.remove('show'), 2000)
 }
 
+// ─── Cadre résolution hôte ────────────────────────────
+function setHostFrame(width, height) {
+  const frame = document.getElementById('host-frame')
+  const label = document.getElementById('host-frame-label')
+  if (!width || !height) {
+    frame.classList.remove('active')
+    return
+  }
+
+  // Calculer la position centrée en gardant le ratio
+  const scaleX = window.innerWidth / width
+  const scaleY = window.innerHeight / height
+  const scale  = Math.min(scaleX, scaleY, 1) // pas d'upscale si l'écran est plus petit
+
+  const fw = Math.round(width  * scale)
+  const fh = Math.round(height * scale)
+  const fx = Math.round((window.innerWidth  - fw) / 2)
+  const fy = Math.round((window.innerHeight - fh) / 2)
+
+  frame.style.left   = fx + 'px'
+  frame.style.top    = fy + 'px'
+  frame.style.width  = fw + 'px'
+  frame.style.height = fh + 'px'
+  label.textContent  = `Écran de ton pote — ${width}×${height}`
+  frame.classList.add('active')
+}
+
 // ─── Screen preview ───────────────────────────────────
 function setScreenPreview(dataUrl) {
   if (dataUrl) {
@@ -508,15 +562,18 @@ ipcRenderer.on('draw-peer-disconnected', (e, { peerId }) => {
   }
 })
 
+// Reçu par le PEER après avoir rejoint : demande le canvas à l'hôte
 ipcRenderer.on('draw-request-sync', () => {
   ipcRenderer.send('draw-full-sync-request')
 })
 
+// Reçu par l'HÔTE quand un peer vient de rejoindre : envoie le canvas complet
 ipcRenderer.on('draw-send-sync', () => {
   ipcRenderer.send('draw-full-sync', canvas.toDataURL())
 })
 
 ipcRenderer.on('draw-flash', (e, msg) => flash(msg))
+ipcRenderer.on('draw-host-screen-size', (e, { width, height }) => setHostFrame(width, height))
 </script>
 </body>
 </html>

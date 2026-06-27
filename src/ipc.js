@@ -350,8 +350,10 @@ function setupIpc() {
   ipcMain.on('draw-enable', () => {
     drawEnabled = true
     drawCode    = generateDrawCode()
+    const { screen } = require('electron')
+    const { width, height } = screen.getPrimaryDisplay().size
     console.log('[Draw] Session ouverte, code:', drawCode)
-    sendDrawEvent('draw-open', { code: drawCode })
+    sendDrawEvent('draw-open', { code: drawCode, hostScreen: { width, height } })
     console.log('[Draw] Event draw-open envoyé au serveur')
     getSettingsWindow()?.webContents.send('draw-status', { enabled: true, code: drawCode })
   })

@@ -69,16 +69,16 @@ function joinDrawRoom(ws, code, username) {
 
   console.log(`[Draw] ${username} a rejoint la room ${code}`)
 
-  // Notify the host (other members) that someone joined
   broadcastToRoom(code, {
     event: 'draw-peer-joined',
     data:  { peerId: ws._peerId, username: ws._drawUsername }
   }, ws)
 
-  // Acknowledge the joining client
+  // Inclure hostScreen dans la confirmation
+  const hostScreen = drawRooms.get(code)?._hostScreen || null
   ws.send(JSON.stringify({
     event: 'draw-joined',
-    data:  { code, ok: true }
+    data:  { code, ok: true, hostScreen }
   }))
 }
 
@@ -122,12 +122,15 @@ function handleClientEvent(ws, event, data) {
 
     // ── Draw: host opens a room ──────────────────────────────────────
     case 'draw-open': {
-      const { code } = data
+      const { code, hostScreen } = data
       if (!drawRooms.has(code)) drawRooms.set(code, new Set())
       drawRooms.get(code).add(ws)
-      ws._drawCode     = code
-      ws._drawUsername = 'Host'
-      ws._isDrawHost   = true
+      ws._drawCode      = code
+      ws._drawUsername  = 'Host'
+      ws._isDrawHost    = true
+      ws._hostScreen    = hostScreen || null
+      // Stocker hostScreen sur la room pour les peers qui rejoignent
+      drawRooms.get(code)._hostScreen = hostScreen || null
       console.log(`[Draw] Room ouverte: ${code} | Rooms actives: ${[...drawRooms.keys()].join(', ')}`)
       break
     }
