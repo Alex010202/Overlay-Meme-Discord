@@ -104,7 +104,7 @@ function createDrawOverlayWindow(hostWidth, hostHeight) {
     minHeight: 300,
     frame: true,
     title: 'Session de dessin',
-    alwaysOnTop: true,
+    alwaysOnTop: false,
     skipTaskbar: false,
     resizable: true,
     movable: true,
@@ -116,7 +116,6 @@ function createDrawOverlayWindow(hostWidth, hostHeight) {
     }
   })
 
-  drawOverlayWindow.setAlwaysOnTop(true, 'screen-saver')
   drawOverlayWindow.loadFile('draw-overlay.html')
   drawOverlayWindow.hide()
 
@@ -141,15 +140,16 @@ function resizeDrawWindow(hostWidth, hostHeight) {
 }
 
 function showDrawOverlay(hostWidth, hostHeight) {
-  if (!drawOverlayWindow || drawOverlayWindow.isDestroyed()) {
+  const isNew = !drawOverlayWindow || drawOverlayWindow.isDestroyed()
+  if (isNew) {
     createDrawOverlayWindow(hostWidth, hostHeight)
   } else if (hostWidth && hostHeight) {
     resizeDrawWindow(hostWidth, hostHeight)
   }
-  drawOverlayWindow.setAlwaysOnTop(true, 'screen-saver')
-  drawOverlayWindow.show()
-  drawOverlayWindow.focus()
-  drawOverlayWindow.moveTop()
+  if (!drawOverlayWindow.isVisible()) {
+    drawOverlayWindow.show()
+    drawOverlayWindow.focus()
+  }
 }
 
 function hideDrawOverlay() {
@@ -177,13 +177,28 @@ function createHostDrawOverlay() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      webSecurity: false
+      webSecurity: false,
+      // Nécessaire pour que getUserMedia puisse capturer l'écran depuis le renderer
+      enableRemoteModule: true
     }
   })
 
   hostDrawOverlay.setAlwaysOnTop(true, 'screen-saver')
-  hostDrawOverlay.setIgnoreMouseEvents(true)
+  hostDrawOverlay.setIgnoreMouseEvents(true, { forward: true })
+  // Exclure cette fenêtre de toute capture d'écran — les dessins du peer
+  // n'apparaîtront jamais dans les frames envoyées au peer lui-même.
+  hostDrawOverlay.setContentProtection(true)
   hostDrawOverlay.loadFile('host-draw-overlay.html')
+
+  // Autoriser getUserMedia pour la capture écran dans ce renderer
+  hostDrawOverlay.webContents.session.setPermissionRequestHandler((wc, permission, callback) => {
+    if (permission === 'media') return callback(true)
+    callback(false)
+  })
+  hostDrawOverlay.webContents.session.setPermissionCheckHandler((wc, permission) => {
+    if (permission === 'media') return true
+    return false
+  })
   hostDrawOverlay.hide()
 
   hostDrawOverlay.on('closed', () => { hostDrawOverlay = null })
@@ -193,6 +208,8 @@ function createHostDrawOverlay() {
 
 function showHostDrawOverlay() {
   if (!hostDrawOverlay || hostDrawOverlay.isDestroyed()) createHostDrawOverlay()
+  // On re-set à chaque show() par sécurité — Electron peut perdre le flag après hide()
+  hostDrawOverlay.setIgnoreMouseEvents(true, { forward: true })
   hostDrawOverlay.show()
 }
 

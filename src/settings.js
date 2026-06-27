@@ -35,7 +35,11 @@ const DEFAULTS = {
   ytQuality: 'hd1080',
   ytNoFullscreen: true,
   ytUaPreset: 'chrome-win',
-  ytUaCustom: ''
+  ytUaCustom: '',
+  // ── Screen share ──────────────────────────────────────────────
+  shareResolution: '540p',  // '360p' | '540p' | '720p' | '1080p'
+  shareFps: 10,             // 5 | 10 | 15 | 30
+  shareQuality: 70          // 40-95, qualité JPEG (%)
 }
 
 function loadSettings() {

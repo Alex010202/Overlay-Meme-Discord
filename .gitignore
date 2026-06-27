@@ -1,13 +1,8 @@
-<<<<<<< HEAD
-node_modules/ 
-token.env 
-dist/ 
-yt-dlp.exe
-=======
 node_modules/
 yt-dlp.exe
 yt-dlp
+start
 token.env
 *.env
 dist/
->>>>>>> 5505636 (v1.0.1)
+start.bat

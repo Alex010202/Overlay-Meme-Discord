@@ -47,6 +47,14 @@ app.whenReady().then(() => {
   }, 50)
 })
 
+app.on('web-contents-created', (e, wc) => {
+  wc.on('console-message', (e, level, message, line, sourceId) => {
+    if (message.includes('[Capture]') || message.includes('[Draw]')) {
+      console.log(`[RENDERER] ${message}`)
+    }
+  })
+})
+
 app.on('window-all-closed', () => app.quit())
 
 app.on('before-quit', () => {

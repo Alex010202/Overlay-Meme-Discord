@@ -27,6 +27,36 @@ let drawCode     = null
 let peerDrawCode = null
 let shareScreen  = false
 let screenTimer  = null
+let captureInProgress = false
+
+// ── Presets résolution/fps ───────────────────────────────────────────
+// Hauteurs cibles fixes — la largeur est calculée en gardant le ratio de l'écran
+const SHARE_RES_TARGET_H = {
+  '360p':  360,
+  '540p':  540,
+  '720p':  720,
+  '1080p': 1080
+}
+
+function getCaptureInterval() {
+  const fps = global.settings.shareFps || 10
+  return Math.round(1000 / Math.max(1, Math.min(30, fps)))
+}
+
+function getCaptureDims() {
+  const { screen: electronScreen } = require('electron')
+  const display = electronScreen.getPrimaryDisplay()
+  const native  = display.size
+  const key     = global.settings.shareResolution || '540p'
+  const targetH = SHARE_RES_TARGET_H[key] || 540
+  const capH    = Math.min(targetH, native.height)
+  const capW    = Math.round(native.width * (capH / native.height))
+  return { capW, capH }
+}
+
+function getCaptureQuality() {
+  return Math.max(0.4, Math.min(0.95, (global.settings.shareQuality ?? 70) / 100))
+}
 
 function getActiveDrawCode() {
   return drawCode || peerDrawCode
@@ -43,36 +73,75 @@ function generateDrawCode() {
   return code
 }
 
-function startScreenCapture() {
-  if (screenTimer) return
-  captureScreen()
-  screenTimer = setInterval(captureScreen, 500)
+// desktopCapturer.getSources() est retiré des renderers depuis Electron 20+.
+// Le main l'appelle UNE SEULE FOIS pour obtenir le sourceId,
+// puis le renderer fait la boucle de capture avec getUserMedia(sourceId).
+// On passe aussi getNativeWindowHandle() pour que le renderer puisse
+// cacher/montrer hostDrawOverlay autour de chaque frame via IPC,
+// évitant que les dessins apparaissent dans la capture envoyée au peer.
+async function startScreenCapture() {
+  const win = getHostDrawOverlay()
+  if (!win || win.isDestroyed()) return
+
+  showHostDrawOverlay()
+
+  try {
+    const { desktopCapturer } = require('electron')
+    const { capW, capH } = getCaptureDims()
+    const fps     = global.settings.shareFps || 10
+    const quality = getCaptureQuality()
+
+    const sources = await desktopCapturer.getSources({
+      types: ['screen'],
+      thumbnailSize: { width: 1, height: 1 }
+    })
+    if (!sources.length) {
+      console.error('[Capture] Aucune source écran trouvée')
+      return
+    }
+
+    const sourceId = sources[0].id
+    console.log('[Capture] sourceId obtenu:', sourceId)
+
+    const send = () => win.webContents.send('capture-start', { sourceId, capW, capH, fps, quality })
+    if (win.webContents.isLoading()) {
+      win.webContents.once('did-finish-load', send)
+    } else {
+      send()
+    }
+  } catch (err) {
+    console.error('[Capture] startScreenCapture erreur:', err.message)
+  }
+}
+
+// Appelé par le renderer juste avant de capturer une frame :
+// on cache l'overlay de dessin pour qu'il n'apparaisse pas dans la capture,
+// puis on le réaffiche immédiatement après.
+function hideOverlayForCapture() {
+  const win = getHostDrawOverlay()
+  if (!win || win.isDestroyed()) return
+  win.hide()
+}
+
+function showOverlayAfterCapture() {
+  const win = getHostDrawOverlay()
+  if (!win || win.isDestroyed()) return
+  win.show()
 }
 
 function stopScreenCapture() {
   clearInterval(screenTimer)
   screenTimer = null
+  captureInProgress = false
+  const win = getHostDrawOverlay()
+  if (win && !win.isDestroyed()) {
+    win.webContents.send('capture-stop')
+  }
 }
 
-async function captureScreen() {
-  if (!shareScreen || !drawEnabled) return
-  try {
-    const { desktopCapturer, screen: electronScreen } = require('electron')
-    const display = electronScreen.getPrimaryDisplay()
-    const sources = await desktopCapturer.getSources({
-      types: ['screen'],
-      thumbnailSize: {
-        width:  Math.round(display.size.width  / 4),
-        height: Math.round(display.size.height / 4)
-      }
-    })
-    if (!sources.length) return
-    const dataUrl = sources[0].thumbnail.toDataURL()
-    getDrawOverlayWindow()?.webContents.send('draw-screen-preview', dataUrl)
-    sendDrawEvent('draw-screen', { dataUrl, code: drawCode })
-  } catch (err) {
-    console.error('[Draw] Capture écran erreur:', err.message)
-  }
+function restartScreenCapture() {
+  stopScreenCapture()
+  if (shareScreen && drawEnabled) startScreenCapture()
 }
 
 function handlePeerLeave() {
@@ -392,6 +461,10 @@ function setupIpc() {
     shareScreen = enabled
     if (enabled && drawEnabled) {
       startScreenCapture()
+      // Informe le peer de la résolution et du FPS choisis
+      const res = global.settings.shareResolution || '540p'
+      const fps = global.settings.shareFps        || 10
+      getDrawOverlayWindow()?.webContents.send('draw-share-info', { resolution: res, fps })
     } else {
       stopScreenCapture()
       sendDrawEvent('draw-screen', { dataUrl: null, code: drawCode })
@@ -399,11 +472,24 @@ function setupIpc() {
     }
   })
 
+  // Mise à jour des paramètres de partage à chaud (sans couper le partage)
+  ipcMain.on('draw-set-share-settings', (e, patch) => {
+    global.settings = saveSettings(patch)   // shareResolution, shareFps, shareQuality
+    if (shareScreen && drawEnabled) {
+      restartScreenCapture()
+      const res = global.settings.shareResolution || '540p'
+      const fps = global.settings.shareFps        || 10
+      getDrawOverlayWindow()?.webContents.send('draw-share-info', { resolution: res, fps })
+    }
+  })
+
   ipcMain.on('draw-sync', (e, data) => {
     const activeCode = getActiveDrawCode()
     if (!activeCode) return
+    // Afficher le dessin du peer sur l'écran de l'hôte
     showHostDrawOverlay()
     getHostDrawOverlay()?.webContents.send('draw-remote-stroke', data)
+    // Envoyer au WS pour que le peer le voie aussi dans sa fenêtre de dessin
     sendDrawEvent('draw-stroke', { ...data, code: activeCode })
   })
 
@@ -428,9 +514,21 @@ function setupIpc() {
     e.reply('draw-status', { enabled: drawEnabled, code: drawCode, shareScreen })
   })
 
+  // Frame de capture reçue depuis host-draw-overlay.html (renderer)
+  ipcMain.on('capture-frame', (e, dataUrl) => {
+    if (!shareScreen || !drawEnabled || !drawCode) return
+    getDrawOverlayWindow()?.webContents.send('draw-screen-preview', dataUrl)
+    sendDrawEvent('draw-screen', { dataUrl, code: drawCode })
+  })
+
+  // Le renderer demande à cacher/montrer l'overlay autour de chaque frame
+  // pour que les dessins n'apparaissent pas dans la capture envoyée au peer
+  ipcMain.on('capture-hide-overlay',  () => hideOverlayForCapture())
+  ipcMain.on('capture-show-overlay',  () => showOverlayAfterCapture())
+
   ipcMain.on('draw-join', (e, { code, username }) => {
     sendDrawEvent('draw-join', { code, username })
   })
 }
 
-module.exports = { setupIpc, getOverlayNormalBounds: () => overlayNormalBounds, setPeerDrawCode }
+module.exports = { setupIpc, getOverlayNormalBounds: () => overlayNormalBounds, setPeerDrawCode, restartScreenCapture }
