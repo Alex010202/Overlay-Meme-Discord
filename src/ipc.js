@@ -14,28 +14,33 @@ const {
   showHostDrawOverlay,
   hideHostDrawOverlay,
   showDrawOverlay,
-  hideDrawOverlay
+  hideDrawOverlay,
+  setOnDrawWindowClosed
 } = require('./windows')
 const { checkForUpdates } = require('./updater')
 const { startBot, sendDrawEvent, setActiveDrawCode } = require('./bot')
 
 let overlayNormalBounds = null
 
-// ─── Draw session state ──────────────────────────────────────────────
 let drawEnabled  = false
 let drawCode     = null
+let peerDrawCode = null
 let shareScreen  = false
 let screenTimer  = null
+
+function getActiveDrawCode() {
+  return drawCode || peerDrawCode
+}
+
+function setPeerDrawCode(code) {
+  peerDrawCode = code || null
+}
 
 function generateDrawCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
   let code = ''
   for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)]
   return code
-}
-
-function broadcastDrawToServer(event, data) {
-  sendDrawEvent(event, data)
 }
 
 function startScreenCapture() {
@@ -63,18 +68,27 @@ async function captureScreen() {
     })
     if (!sources.length) return
     const dataUrl = sources[0].thumbnail.toDataURL()
-    // Send to draw overlay locally
     getDrawOverlayWindow()?.webContents.send('draw-screen-preview', dataUrl)
-    // Broadcast to peers via server
     sendDrawEvent('draw-screen', { dataUrl, code: drawCode })
   } catch (err) {
     console.error('[Draw] Capture écran erreur:', err.message)
   }
 }
 
+function handlePeerLeave() {
+  const activeCode = peerDrawCode
+  if (!activeCode) return
+  sendDrawEvent('draw-leave', { code: activeCode })
+  sendDrawEvent('draw-stroke', { type: 'clear', code: activeCode })
+  setPeerDrawCode(null)
+  getHostDrawOverlay()?.webContents.send('draw-clear')
+  hideHostDrawOverlay()
+  getSettingsWindow()?.webContents.send('draw-status', { enabled: false, code: null })
+}
+
 function setupIpc() {
 
-  // ── Existing IPC ──────────────────────────────────────────────────
+  setOnDrawWindowClosed(handlePeerLeave)
 
   ipcMain.on('check-for-updates', () => checkForUpdates())
 
@@ -158,8 +172,8 @@ function setupIpc() {
 
     if (!overlayNormalBounds) overlayNormalBounds = { ...overlay.getBounds() }
 
-    const bounds  = overlay.getBounds()
-    const display = screen.getDisplayMatching(bounds)
+    const bounds   = overlay.getBounds()
+    const display  = screen.getDisplayMatching(bounds)
     const workArea = display.workArea
 
     const maxW = Math.floor(workArea.width * 0.8)
@@ -286,8 +300,8 @@ function setupIpc() {
   ipcMain.on('yt-view-resize',  (e, bounds) => resizeYtView(bounds))
   ipcMain.on('yt-view-destroy', ()           => destroyYtView())
 
-  ipcMain.on('set-yt-settings',        (e, patch) => { global.settings = saveSettings(patch) })
-  ipcMain.on('save-settings-patch',    (e, patch) => { global.settings = saveSettings(patch) })
+  ipcMain.on('set-yt-settings',     (e, patch) => { global.settings = saveSettings(patch) })
+  ipcMain.on('save-settings-patch', (e, patch) => { global.settings = saveSettings(patch) })
 
   ipcMain.on('set-yt-useragent', (e, patch) => {
     global.settings = saveSettings(patch)
@@ -349,17 +363,13 @@ function setupIpc() {
     `).catch(err => console.error('IPC yt-live-quality erreur:', err.message))
   })
 
-  // ── Drawing IPC ───────────────────────────────────────────────────
-
   ipcMain.on('draw-enable', () => {
     drawEnabled = true
     drawCode    = generateDrawCode()
     const { screen } = require('electron')
     const { width, height } = screen.getPrimaryDisplay().size
-    console.log('[Draw] Session ouverte, code:', drawCode)
-    setActiveDrawCode(drawCode)   // ← mémoriser pour re-envoyer après reconnexion WS
+    setActiveDrawCode(drawCode)
     sendDrawEvent('draw-open', { code: drawCode, hostScreen: { width, height } })
-    console.log('[Draw] Event draw-open envoyé au serveur')
     getSettingsWindow()?.webContents.send('draw-status', { enabled: true, code: drawCode })
     createHostDrawOverlay()
   })
@@ -368,11 +378,12 @@ function setupIpc() {
     drawEnabled = false
     const oldCode = drawCode
     drawCode = null
-    setActiveDrawCode(null)   // ← plus de session active
+    setActiveDrawCode(null)
     stopScreenCapture()
     shareScreen = false
     hideDrawOverlay()
     hideHostDrawOverlay()
+    getHostDrawOverlay()?.webContents.send('draw-clear')
     sendDrawEvent('draw-close', { code: oldCode })
     getSettingsWindow()?.webContents.send('draw-status', { enabled: false, code: null })
   })
@@ -383,47 +394,43 @@ function setupIpc() {
       startScreenCapture()
     } else {
       stopScreenCapture()
-      // Tell peers no more screen
       sendDrawEvent('draw-screen', { dataUrl: null, code: drawCode })
       getDrawOverlayWindow()?.webContents.send('draw-screen-preview', null)
     }
   })
 
-  // Relay draw stroke from the local overlay window → server → peers
   ipcMain.on('draw-sync', (e, data) => {
-    if (!drawEnabled || !drawCode) return
-    sendDrawEvent('draw-stroke', { ...data, code: drawCode })
+    const activeCode = getActiveDrawCode()
+    if (!activeCode) return
+    showHostDrawOverlay()
+    getHostDrawOverlay()?.webContents.send('draw-remote-stroke', data)
+    sendDrawEvent('draw-stroke', { ...data, code: activeCode })
   })
 
-  // Relay cursor position
   ipcMain.on('draw-cursor', (e, pos) => {
-    if (!drawEnabled || !drawCode) return
-    sendDrawEvent('draw-cursor-move', { ...pos, code: drawCode })
+    const activeCode = getActiveDrawCode()
+    if (!activeCode) return
+    sendDrawEvent('draw-cursor-move', { ...pos, code: activeCode })
   })
 
-  // Relay full canvas sync to a new peer
   ipcMain.on('draw-full-sync', (e, dataUrl) => {
-    if (!drawEnabled || !drawCode) return
-    sendDrawEvent('draw-full-sync', { dataUrl, code: drawCode })
+    const activeCode = getActiveDrawCode()
+    if (!activeCode) return
+    sendDrawEvent('draw-full-sync', { dataUrl, code: activeCode })
   })
 
-  // Peer requests a full sync from the host canvas → ask the host's draw overlay to send its canvas
   ipcMain.on('draw-full-sync-request', () => {
-    if (!drawEnabled || !drawCode) return
+    if (!getActiveDrawCode()) return
     getDrawOverlayWindow()?.webContents.send('draw-send-sync', {})
   })
 
-  // Get current draw state for settings window
   ipcMain.on('draw-get-status', (e) => {
     e.reply('draw-status', { enabled: drawEnabled, code: drawCode, shareScreen })
   })
 
-  // Peer joins from this client's settings window (they are the peer, not the host)
   ipcMain.on('draw-join', (e, { code, username }) => {
-    console.log('[Draw] Tentative de join room:', code, 'username:', username)
     sendDrawEvent('draw-join', { code, username })
-    console.log('[Draw] Event draw-join envoyé au serveur')
   })
 }
 
-module.exports = { setupIpc, getOverlayNormalBounds: () => overlayNormalBounds }
+module.exports = { setupIpc, getOverlayNormalBounds: () => overlayNormalBounds, setPeerDrawCode }

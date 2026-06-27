@@ -3,12 +3,18 @@ const path = require('path')
 const { loadSettings, saveSettings, loadProfiles } = require('./settings')
 const { app } = require('electron')
 
-let overlayWindow    = null
-let settingsWindow   = null
+let overlayWindow     = null
+let settingsWindow    = null
 let drawOverlayWindow = null
-let hostDrawOverlay  = null   // fenêtre transparente plein écran pour l'hôte
-let ytView = null
-let tray = null
+let hostDrawOverlay   = null
+let ytView            = null
+let tray              = null
+
+let _onDrawWindowClosed = null
+
+function setOnDrawWindowClosed(fn) {
+  _onDrawWindowClosed = fn
+}
 
 const YT_UA_PRESETS = {
   'chrome-win':   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
@@ -25,11 +31,11 @@ function getYtUserAgent() {
   return YT_UA_PRESETS[s.ytUaPreset] || YT_UA_PRESETS['chrome-win']
 }
 
-function getOverlayWindow()      { return overlayWindow }
-function getSettingsWindow()     { return settingsWindow }
-function getDrawOverlayWindow()  { return drawOverlayWindow }
-function getHostDrawOverlay()    { return hostDrawOverlay }
-function getYtView()             { return ytView }
+function getOverlayWindow()     { return overlayWindow }
+function getSettingsWindow()    { return settingsWindow }
+function getDrawOverlayWindow() { return drawOverlayWindow }
+function getHostDrawOverlay()   { return hostDrawOverlay }
+function getYtView()            { return ytView }
 
 function createOverlayWindow() {
   const bounds = global.settings.overlayBounds || { width: 360, height: 260, x: 20, y: 20 }
@@ -76,19 +82,15 @@ function createOverlayWindow() {
   return overlayWindow
 }
 
-// ─── Draw Overlay Window ──────────────────────────────────────────
 function createDrawOverlayWindow(hostWidth, hostHeight) {
   if (drawOverlayWindow && !drawOverlayWindow.isDestroyed()) {
-    // Si déjà ouverte, juste redimensionner si nécessaire
     if (hostWidth && hostHeight) resizeDrawWindow(hostWidth, hostHeight)
     return drawOverlayWindow
   }
 
-  // Taille initiale : résolution de l'hôte ou 1280x720 par défaut
   const winW = hostWidth  || 1280
   const winH = hostHeight || 720
 
-  // Centrer sur l'écran local
   const { width: sw, height: sh } = screen.getPrimaryDisplay().workAreaSize
   const x = Math.round((sw - winW) / 2)
   const y = Math.round((sh - winH) / 2)
@@ -102,7 +104,7 @@ function createDrawOverlayWindow(hostWidth, hostHeight) {
     minHeight: 300,
     frame: true,
     title: 'Session de dessin',
-    alwaysOnTop: false,
+    alwaysOnTop: true,
     skipTaskbar: false,
     resizable: true,
     movable: true,
@@ -114,11 +116,13 @@ function createDrawOverlayWindow(hostWidth, hostHeight) {
     }
   })
 
+  drawOverlayWindow.setAlwaysOnTop(true, 'screen-saver')
   drawOverlayWindow.loadFile('draw-overlay.html')
   drawOverlayWindow.hide()
 
   drawOverlayWindow.on('closed', () => {
     drawOverlayWindow = null
+    if (_onDrawWindowClosed) _onDrawWindowClosed()
   })
 
   return drawOverlayWindow
@@ -127,7 +131,6 @@ function createDrawOverlayWindow(hostWidth, hostHeight) {
 function resizeDrawWindow(hostWidth, hostHeight) {
   if (!drawOverlayWindow || drawOverlayWindow.isDestroyed()) return
   const { width: sw, height: sh } = screen.getPrimaryDisplay().workAreaSize
-  // Limiter à 90% de l'écran local
   const maxW = Math.floor(sw * 0.9)
   const maxH = Math.floor(sh * 0.9)
   const winW = Math.min(hostWidth,  maxW)
@@ -143,15 +146,16 @@ function showDrawOverlay(hostWidth, hostHeight) {
   } else if (hostWidth && hostHeight) {
     resizeDrawWindow(hostWidth, hostHeight)
   }
+  drawOverlayWindow.setAlwaysOnTop(true, 'screen-saver')
   drawOverlayWindow.show()
   drawOverlayWindow.focus()
+  drawOverlayWindow.moveTop()
 }
 
 function hideDrawOverlay() {
   if (drawOverlayWindow && !drawOverlayWindow.isDestroyed()) drawOverlayWindow.hide()
 }
 
-// ─── Host Draw Overlay (transparent, always-on-top, fullscreen) ───
 function createHostDrawOverlay() {
   if (hostDrawOverlay && !hostDrawOverlay.isDestroyed()) return hostDrawOverlay
 
@@ -196,7 +200,6 @@ function hideHostDrawOverlay() {
   if (hostDrawOverlay && !hostDrawOverlay.isDestroyed()) hostDrawOverlay.hide()
 }
 
-// ─── Settings Window ──────────────────────────────────────────────
 function createSettingsWindow() {
   if (settingsWindow) { settingsWindow.focus(); return }
 
@@ -435,5 +438,6 @@ module.exports = {
   createYtView,
   resizeYtView,
   destroyYtView,
-  getYtUserAgent
+  getYtUserAgent,
+  setOnDrawWindowClosed
 }

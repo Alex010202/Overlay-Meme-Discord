@@ -13,6 +13,11 @@ let ws = null
 let overlayWinRef  = null
 let reconnectTimer = null
 let destroyed      = false
+let activeDrawCode = null
+
+function setActiveDrawCode(code) {
+  activeDrawCode = code || null
+}
 
 function buildWsUrl() {
   if (!WS_URL) return null
@@ -43,6 +48,7 @@ async function onServerEvent(event, data) {
     const { getSettingsWindow, getDrawOverlayWindow, showDrawOverlay } = require('./windows')
     getSettingsWindow()?.webContents.send('draw-joined', data)
     if (data.ok) {
+      require('./ipc').setPeerDrawCode(data.code)
       const hw = data.hostScreen?.width
       const hh = data.hostScreen?.height
       showDrawOverlay(hw, hh)
@@ -66,7 +72,7 @@ async function onServerEvent(event, data) {
   }
 
   if (event === 'draw-closed') {
-    // Host closed the session
+    require('./ipc').setPeerDrawCode(null)
     const { getDrawOverlayWindow, getSettingsWindow, hideDrawOverlay, hideHostDrawOverlay, getHostDrawOverlay } = require('./windows')
     getDrawOverlayWindow()?.webContents.send('draw-flash', 'Session terminée par l\'hôte')
     getHostDrawOverlay()?.webContents.send('draw-clear')
@@ -76,10 +82,8 @@ async function onServerEvent(event, data) {
   }
 
   if (event === 'draw-stroke') {
-    // Relay stroke to the draw overlay window (peer side)
     const { getDrawOverlayWindow, getHostDrawOverlay, showHostDrawOverlay } = require('./windows')
     getDrawOverlayWindow()?.webContents.send('draw-remote-stroke', data)
-    // Also relay to host's transparent overlay so host sees peer drawings on their screen
     showHostDrawOverlay()
     getHostDrawOverlay()?.webContents.send('draw-remote-stroke', data)
     return
@@ -102,7 +106,6 @@ async function onServerEvent(event, data) {
   if (event === 'draw-peer-joined') {
     console.log('[Draw] draw-peer-joined reçu:', data)
     const { getDrawOverlayWindow, getSettingsWindow } = require('./windows')
-    // L'hôte local envoie son canvas au peer qui vient de rejoindre
     getDrawOverlayWindow()?.webContents.send('draw-send-sync', data)
     getDrawOverlayWindow()?.webContents.send('draw-flash', `${data.username || 'Quelqu\'un'} a rejoint le dessin`)
     getSettingsWindow()?.webContents.send('draw-peer-joined', data)
@@ -117,20 +120,17 @@ async function onServerEvent(event, data) {
   }
 
   if (event === 'draw-full-sync') {
-    // A peer is sending the full canvas state after we requested it
     const { getDrawOverlayWindow } = require('./windows')
     getDrawOverlayWindow()?.webContents.send('draw-remote-stroke', { type: 'full-sync', dataUrl: data.dataUrl })
     return
   }
 
   if (event === 'draw-full-sync-request') {
-    // Le serveur demande à l'hôte d'envoyer son canvas complet aux peers
     const { getDrawOverlayWindow } = require('./windows')
     getDrawOverlayWindow()?.webContents.send('draw-send-sync', data)
     return
   }
 
-  // ── yt-dlp ──────────────────────────────────────────────────────
   if (event === 'ytdlp-needed') {
     const { url, type, content, author, avatar, time } = data
 
@@ -176,9 +176,7 @@ async function onServerEvent(event, data) {
   }
 }
 
-// ─── Send a draw event to the server ────────────────────────────────
 function sendDrawEvent(event, data) {
-  console.log('[Draw] sendDrawEvent:', event, '| WS readyState:', ws ? ws.readyState : 'null')
   if (ws && ws.readyState === 1) {
     ws.send(JSON.stringify({ event, data }))
   } else {
@@ -208,6 +206,14 @@ function connect() {
     const { getOverlayWindow, getSettingsWindow } = require('./windows')
     getOverlayWindow()?.webContents.send('status', { ok: true, tag: 'Connecté' })
     getSettingsWindow()?.webContents.send('status', { ok: true, tag: 'Connecté' })
+
+    // Si une session de dessin était active avant la coupure, on la rouvre
+    // côté serveur avec le même code pour que les peers puissent rester/rejoindre.
+    if (activeDrawCode) {
+      const { screen } = require('electron')
+      const { width, height } = screen.getPrimaryDisplay().size
+      sendDrawEvent('draw-open', { code: activeDrawCode, hostScreen: { width, height } })
+    }
   })
 
   ws.on('message', (raw) => {
@@ -249,4 +255,4 @@ function destroyBot() {
   }
 }
 
-module.exports = { startBot, destroyBot, sendDrawEvent }
+module.exports = { startBot, destroyBot, sendDrawEvent, setActiveDrawCode }
