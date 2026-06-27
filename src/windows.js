@@ -88,23 +88,18 @@ function createDrawOverlayWindow(hostWidth, hostHeight) {
     return drawOverlayWindow
   }
 
-  const winW = hostWidth  || 1280
-  const winH = hostHeight || 720
-
-  const { width: sw, height: sh } = screen.getPrimaryDisplay().workAreaSize
-  const x = Math.round((sw - winW) / 2)
-  const y = Math.round((sh - winH) / 2)
+  // Toujours utiliser la taille physique totale de l'écran (taskbar incluse)
+  // pour que le canvas couvre exactement les mêmes pixels que l'écran de l'hôte.
+  const { width: sw, height: sh } = screen.getPrimaryDisplay().size
 
   drawOverlayWindow = new BrowserWindow({
-    width:  winW,
-    height: winH,
-    x: Math.max(0, x),
-    y: Math.max(0, y),
-    minWidth:  400,
-    minHeight: 300,
+    width:  sw,
+    height: sh,
+    x: 0,
+    y: 0,
     frame: true,
     title: 'Session de dessin',
-    alwaysOnTop: true,
+    alwaysOnTop: false,
     skipTaskbar: false,
     resizable: true,
     movable: true,
@@ -116,7 +111,6 @@ function createDrawOverlayWindow(hostWidth, hostHeight) {
     }
   })
 
-  drawOverlayWindow.setAlwaysOnTop(true, 'screen-saver')
   drawOverlayWindow.loadFile('draw-overlay.html')
   drawOverlayWindow.hide()
 
@@ -130,26 +124,20 @@ function createDrawOverlayWindow(hostWidth, hostHeight) {
 
 function resizeDrawWindow(hostWidth, hostHeight) {
   if (!drawOverlayWindow || drawOverlayWindow.isDestroyed()) return
-  const { width: sw, height: sh } = screen.getPrimaryDisplay().workAreaSize
-  const maxW = Math.floor(sw * 0.9)
-  const maxH = Math.floor(sh * 0.9)
-  const winW = Math.min(hostWidth,  maxW)
-  const winH = Math.min(hostHeight, maxH)
-  const x = Math.round((sw - winW) / 2)
-  const y = Math.round((sh - winH) / 2)
-  drawOverlayWindow.setBounds({ x: Math.max(0, x), y: Math.max(0, y), width: winW, height: winH }, true)
+  // On reste toujours en plein écran physique — le HTML gère le scaling interne
+  const { width: sw, height: sh } = screen.getPrimaryDisplay().size
+  drawOverlayWindow.setBounds({ x: 0, y: 0, width: sw, height: sh }, true)
 }
 
 function showDrawOverlay(hostWidth, hostHeight) {
-  if (!drawOverlayWindow || drawOverlayWindow.isDestroyed()) {
+  const isNew = !drawOverlayWindow || drawOverlayWindow.isDestroyed()
+  if (isNew) {
     createDrawOverlayWindow(hostWidth, hostHeight)
-  } else if (hostWidth && hostHeight) {
-    resizeDrawWindow(hostWidth, hostHeight)
   }
-  drawOverlayWindow.setAlwaysOnTop(true, 'screen-saver')
-  drawOverlayWindow.show()
-  drawOverlayWindow.focus()
-  drawOverlayWindow.moveTop()
+  if (!drawOverlayWindow.isVisible()) {
+    drawOverlayWindow.show()
+    drawOverlayWindow.focus()
+  }
 }
 
 function hideDrawOverlay() {
@@ -159,13 +147,13 @@ function hideDrawOverlay() {
 function createHostDrawOverlay() {
   if (hostDrawOverlay && !hostDrawOverlay.isDestroyed()) return hostDrawOverlay
 
-  const { width, height } = screen.getPrimaryDisplay().size
+  const b = screen.getPrimaryDisplay().bounds
 
   hostDrawOverlay = new BrowserWindow({
-    width,
-    height,
-    x: 0,
-    y: 0,
+    x: b.x,
+    y: b.y,
+    width: b.width,
+    height: b.height,
     transparent: true,
     frame: false,
     alwaysOnTop: true,
@@ -177,13 +165,31 @@ function createHostDrawOverlay() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      webSecurity: false
+      webSecurity: false,
+      enableRemoteModule: true
     }
   })
 
-  hostDrawOverlay.setAlwaysOnTop(true, 'screen-saver')
-  hostDrawOverlay.setIgnoreMouseEvents(true)
+  hostDrawOverlay.setAlwaysOnTop(true, 'pop-up-menu')
+  hostDrawOverlay.setIgnoreMouseEvents(true, { forward: true })
+  //hostDrawOverlay.setContentProtection(true)
   hostDrawOverlay.loadFile('host-draw-overlay.html')
+
+  // Force les bounds après loadFile — Electron/Windows peut reclipper
+  // la fenêtre à workArea pendant le chargement
+  hostDrawOverlay.webContents.once('did-finish-load', () => {
+    const b2 = screen.getPrimaryDisplay().bounds
+    hostDrawOverlay.setBounds({ x: b2.x, y: b2.y, width: b2.width, height: b2.height })
+  })
+
+  hostDrawOverlay.webContents.session.setPermissionRequestHandler((wc, permission, callback) => {
+    if (permission === 'media') return callback(true)
+    callback(false)
+  })
+  hostDrawOverlay.webContents.session.setPermissionCheckHandler((wc, permission) => {
+    if (permission === 'media') return true
+    return false
+  })
   hostDrawOverlay.hide()
 
   hostDrawOverlay.on('closed', () => { hostDrawOverlay = null })
@@ -193,7 +199,13 @@ function createHostDrawOverlay() {
 
 function showHostDrawOverlay() {
   if (!hostDrawOverlay || hostDrawOverlay.isDestroyed()) createHostDrawOverlay()
+  hostDrawOverlay.setIgnoreMouseEvents(true, { forward: true })
+  hostDrawOverlay.setAlwaysOnTop(true, 'pop-up-menu')
   hostDrawOverlay.show()
+  // setBounds après show() force la fenêtre à couvrir toute la résolution
+  // taskbar incluse — Windows bloque ça à la création mais pas après show()
+  const b = screen.getPrimaryDisplay().bounds
+  hostDrawOverlay.setBounds({ x: b.x, y: b.y, width: b.width, height: b.height })
 }
 
 function hideHostDrawOverlay() {

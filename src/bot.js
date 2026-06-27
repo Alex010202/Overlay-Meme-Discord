@@ -5,44 +5,35 @@ const {
   fetchYtDlpTikTokFile,
   fetchYtDlpMeta
 } = require('./ytdlp')
-
 const WS_URL    = process.env.WS_URL    || ''
 const WS_SECRET = process.env.WS_SECRET || ''
-
 let ws = null
 let overlayWinRef  = null
 let reconnectTimer = null
 let destroyed      = false
 let activeDrawCode = null
-
 function setActiveDrawCode(code) {
   activeDrawCode = code || null
 }
-
 function buildWsUrl() {
   if (!WS_URL) return null
   const url = new URL(WS_URL)
   if (WS_SECRET) url.searchParams.set('secret', WS_SECRET)
   return url.toString()
 }
-
 async function onServerEvent(event, data) {
   const overlay = overlayWinRef
   if (!overlay || overlay.isDestroyed()) return
-
   if (event === 'status') {
     const { getOverlayWindow, getSettingsWindow } = require('./windows')
     getOverlayWindow()?.webContents.send('status', data)
     getSettingsWindow()?.webContents.send('status', data)
     return
   }
-
   if (event === 'message') {
     overlay.webContents.send('message', data)
     return
   }
-
-  // ── Drawing events ──────────────────────────────────────────────
   if (event === 'draw-joined') {
     console.log('[Draw] draw-joined reçu du serveur:', data)
     const { getSettingsWindow, getDrawOverlayWindow, showDrawOverlay } = require('./windows')
@@ -70,7 +61,6 @@ async function onServerEvent(event, data) {
     }
     return
   }
-
   if (event === 'draw-closed') {
     require('./ipc').setPeerDrawCode(null)
     const { getDrawOverlayWindow, getSettingsWindow, hideDrawOverlay, hideHostDrawOverlay, getHostDrawOverlay } = require('./windows')
@@ -80,7 +70,6 @@ async function onServerEvent(event, data) {
     setTimeout(() => { hideDrawOverlay(); hideHostDrawOverlay() }, 2000)
     return
   }
-
   if (event === 'draw-stroke') {
     const { getDrawOverlayWindow, getHostDrawOverlay, showHostDrawOverlay } = require('./windows')
     getDrawOverlayWindow()?.webContents.send('draw-remote-stroke', data)
@@ -88,13 +77,11 @@ async function onServerEvent(event, data) {
     getHostDrawOverlay()?.webContents.send('draw-remote-stroke', data)
     return
   }
-
   if (event === 'draw-cursor') {
     const { getDrawOverlayWindow } = require('./windows')
     getDrawOverlayWindow()?.webContents.send('draw-remote-cursor', data)
     return
   }
-
   if (event === 'draw-screen') {
     console.log('[Draw] draw-screen reçu, dataUrl:', data.dataUrl ? data.dataUrl.slice(0, 50) + '...' : 'NULL')
     const { getDrawOverlayWindow, showDrawOverlay } = require('./windows')
@@ -102,7 +89,6 @@ async function onServerEvent(event, data) {
     getDrawOverlayWindow()?.webContents.send('draw-screen-preview', data.dataUrl)
     return
   }
-
   if (event === 'draw-peer-joined') {
     console.log('[Draw] draw-peer-joined reçu:', data)
     const { getDrawOverlayWindow, getSettingsWindow } = require('./windows')
@@ -111,29 +97,24 @@ async function onServerEvent(event, data) {
     getSettingsWindow()?.webContents.send('draw-peer-joined', data)
     return
   }
-
   if (event === 'draw-peer-left') {
     const { getDrawOverlayWindow, getSettingsWindow } = require('./windows')
     getDrawOverlayWindow()?.webContents.send('draw-peer-disconnected', data)
     getSettingsWindow()?.webContents.send('draw-peer-left', data)
     return
   }
-
   if (event === 'draw-full-sync') {
     const { getDrawOverlayWindow } = require('./windows')
     getDrawOverlayWindow()?.webContents.send('draw-remote-stroke', { type: 'full-sync', dataUrl: data.dataUrl })
     return
   }
-
   if (event === 'draw-full-sync-request') {
     const { getDrawOverlayWindow } = require('./windows')
     getDrawOverlayWindow()?.webContents.send('draw-send-sync', data)
     return
   }
-
   if (event === 'ytdlp-needed') {
     const { url, type, content, author, avatar, time } = data
-
     if (type === 'tiktok') {
       const [filePath, meta] = await Promise.all([
         fetchYtDlpTikTokFile(url, global.settings),
@@ -142,7 +123,6 @@ async function onServerEvent(event, data) {
         console.error('TikTok resolve erreur:', err.message)
         return [null, null]
       })
-
       overlay.webContents.send('ytdlp-resolved', {
         loadingUrl: url,
         videoUrl:  filePath ? `file:///${filePath.replace(/\\/g, '/')}` : null,
@@ -161,7 +141,6 @@ async function onServerEvent(event, data) {
         console.error('yt-dlp resolve erreur:', err.message)
         return [null, null]
       })
-
       overlay.webContents.send('ytdlp-resolved', {
         loadingUrl: url,
         videoUrl:  streams?.video || null,
@@ -175,19 +154,24 @@ async function onServerEvent(event, data) {
     }
   }
 }
-
 function sendDrawEvent(event, data) {
   if (ws && ws.readyState === 1) {
-    ws.send(JSON.stringify({ event, data }))
+    ws.send(JSON.stringify({ e: event, d: data }))
   } else {
     console.warn('[Draw] WS pas prêt, event perdu:', event)
   }
 }
-
+let lastCursorSent = 0
+const CURSOR_INTERVAL_MS = 50
+function sendCursorEvent(data) {
+  const now = Date.now()
+  if (now - lastCursorSent < CURSOR_INTERVAL_MS) return
+  lastCursorSent = now
+  sendDrawEvent('draw-cursor-move', data)
+}
 function connect() {
   if (destroyed) return
   if (ws && (ws.readyState === 0 || ws.readyState === 1)) return
-
   const url = buildWsUrl()
   if (!url) {
     console.error('[Bot] WS_URL manquant dans token.env')
@@ -196,29 +180,28 @@ function connect() {
     getSettingsWindow()?.webContents.send('status', { ok: false, error: 'WS_URL manquant' })
     return
   }
-
   console.log('[Bot] Connexion WebSocket à', WS_URL)
-  ws = new WebSocket(url)
-
+  ws = new WebSocket(url, { perMessageDeflate: true })
   ws.on('open', () => {
     console.log('[Bot] WebSocket connecté')
     clearTimeout(reconnectTimer)
     const { getOverlayWindow, getSettingsWindow } = require('./windows')
     getOverlayWindow()?.webContents.send('status', { ok: true, tag: 'Connecté' })
     getSettingsWindow()?.webContents.send('status', { ok: true, tag: 'Connecté' })
-
-    // Si une session de dessin était active avant la coupure, on la rouvre
-    // côté serveur avec le même code pour que les peers puissent rester/rejoindre.
     if (activeDrawCode) {
       const { screen } = require('electron')
-      const { width, height } = screen.getPrimaryDisplay().size
-      sendDrawEvent('draw-open', { code: activeDrawCode, hostScreen: { width, height } })
+      const display     = screen.getPrimaryDisplay()
+      const scaleFactor = display.scaleFactor || 1
+      const cssW = Math.round(display.size.width  / scaleFactor)
+      const cssH = Math.round(display.size.height / scaleFactor)
+      sendDrawEvent('draw-open', { code: activeDrawCode, hostScreen: { width: cssW, height: cssH } })
     }
   })
-
   ws.on('message', (raw) => {
     try {
-      const { event, data } = JSON.parse(raw)
+      const msg = JSON.parse(raw)
+      const event = msg.e ?? msg.event
+      const data  = msg.d ?? msg.data
       onServerEvent(event, data).catch(err => {
         console.error('[Bot] Erreur événement', event, ':', err.message)
       })
@@ -226,24 +209,20 @@ function connect() {
       console.error('[Bot] Message invalide reçu:', err.message)
     }
   })
-
   ws.on('close', (code) => {
     console.warn(`[Bot] WebSocket fermé (${code}) — reconnexion dans 5s...`)
     if (!destroyed) reconnectTimer = setTimeout(connect, 5000)
   })
-
   ws.on('error', (err) => {
     console.error('[Bot] Erreur WebSocket:', err.message)
   })
 }
-
 function startBot(channelId, overlayWindow) {
   destroyBot()
   overlayWinRef = overlayWindow
   destroyed     = false
   connect()
 }
-
 function destroyBot() {
   destroyed = true
   clearTimeout(reconnectTimer)
@@ -254,5 +233,4 @@ function destroyBot() {
     ws = null
   }
 }
-
-module.exports = { startBot, destroyBot, sendDrawEvent, setActiveDrawCode }
+module.exports = { startBot, destroyBot, sendDrawEvent, sendCursorEvent, setActiveDrawCode }

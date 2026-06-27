@@ -23,11 +23,11 @@
     }
 
     html, body { height: 100%; overflow: hidden; }
-    body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; }
 
     /* ── Titlebar ── */
     .titlebar {
-      height: 44px;
+      height: 46px;
       background: var(--surface);
       border-bottom: 1px solid var(--border-subtle);
       display: flex; align-items: center; justify-content: space-between;
@@ -38,10 +38,10 @@
     }
     .titlebar-left { display: flex; align-items: center; gap: 10px; }
     .titlebar-logo {
-      width: 26px; height: 26px;
-      background: var(--accent); border-radius: 7px;
+      width: 28px; height: 28px;
+      background: var(--accent); border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 13px;
+      font-size: 14px; box-shadow: 0 2px 8px rgba(88,101,242,0.3);
     }
     .titlebar-name { font-size: 13px; font-weight: 600; color: var(--text); letter-spacing: -0.1px; }
     .titlebar-right { display: flex; align-items: center; gap: 8px; -webkit-app-region: no-drag; }
@@ -69,7 +69,7 @@
     .layout { display: flex; flex: 1; overflow: hidden; }
 
     .sidebar {
-      width: 112px; flex-shrink: 0;
+      width: 148px; flex-shrink: 0;
       background: var(--surface);
       border-right: 1px solid var(--border-subtle);
       padding: 10px 6px;
@@ -77,8 +77,8 @@
     }
     .nav {
       display: flex; align-items: center; gap: 8px;
-      padding: 7px 10px; border-radius: 6px;
-      font-size: 12px; font-weight: 500; color: var(--text-muted);
+      padding: 8px 10px; border-radius: 7px;
+      font-size: 12.5px; font-weight: 500; color: var(--text-muted);
       cursor: pointer; transition: background 0.12s, color 0.12s;
       user-select: none;
     }
@@ -104,8 +104,8 @@
       overflow: hidden;
     }
     .card-header {
-      padding: 10px 14px;
-      font-size: 10px; font-weight: 700;
+      padding: 11px 16px;
+      font-size: 10.5px; font-weight: 700;
       text-transform: uppercase; letter-spacing: 0.9px;
       color: var(--text-muted);
       border-bottom: 1px solid var(--border-subtle);
@@ -115,14 +115,14 @@
     /* ── Rows ── */
     .row {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 11px 14px; gap: 16px;
+      padding: 12px 16px; gap: 16px;
       border-bottom: 1px solid var(--border-subtle);
     }
     .row:last-child { border-bottom: none; }
-    .row-full { padding: 12px 14px; border-bottom: 1px solid var(--border-subtle); }
+    .row-full { padding: 13px 16px; border-bottom: 1px solid var(--border-subtle); }
     .row-full:last-child { border-bottom: none; }
 
-    .row-label { font-size: 13px; color: var(--text); flex-shrink: 0; }
+    .row-label { font-size: 13px; font-weight: 500; color: var(--text); flex-shrink: 0; }
     .row-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
     .row-left { flex: 1; min-width: 0; }
 
@@ -131,15 +131,15 @@
     input[type="text"] {
       flex: 1; background: var(--raised);
       border: 1px solid var(--border); border-radius: 7px;
-      padding: 8px 11px; color: var(--text); font-size: 13px;
-      outline: none; transition: border-color 0.15s;
+      padding: 9px 12px; color: var(--text); font-size: 13px;
+      outline: none; transition: border-color 0.15s, box-shadow 0.15s; font-family: inherit;
     }
-    input[type="text"]:focus { border-color: var(--accent); }
+    input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
 
     select {
       flex: 1; background: var(--raised);
       border: 1px solid var(--border); border-radius: 7px;
-      padding: 8px 28px 8px 11px; color: var(--text); font-size: 13px;
+      padding: 9px 30px 9px 12px; color: var(--text); font-size: 13px;
       outline: none; cursor: pointer;
       appearance: none; -webkit-appearance: none;
       background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%235a5d6b'/></svg>");
@@ -155,7 +155,7 @@
       flex: 1; accent-color: var(--accent);
       cursor: pointer; height: 3px;
     }
-    .slider-val { font-size: 12px; font-weight: 600; color: var(--accent); min-width: 36px; text-align: right; }
+    .slider-val { font-size: 12px; font-weight: 600; color: var(--accent); min-width: 38px; text-align: right; background: var(--accent-dim); border-radius: 5px; padding: 2px 6px; }
 
     /* ── Toggle ── */
     .toggle { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
@@ -176,11 +176,12 @@
     /* ── Buttons ── */
     .btn {
       background: var(--accent); color: white; border: none;
-      border-radius: 7px; padding: 8px 14px;
+      border-radius: 7px; padding: 8px 15px;
       font-size: 13px; font-weight: 600; cursor: pointer;
-      transition: opacity 0.15s; white-space: nowrap;
+      transition: opacity 0.15s, transform 0.1s; white-space: nowrap; font-family: inherit;
     }
-    .btn:hover { opacity: 0.85; }
+    .btn:hover { opacity: 0.88; }
+    .btn:active { transform: scale(0.97); }
     .btn.sm { padding: 5px 11px; font-size: 12px; }
     .btn.ghost { background: var(--raised); border: 1px solid var(--border); color: var(--text-secondary); }
     .btn.ghost:hover { background: var(--border); opacity: 1; }
@@ -224,6 +225,12 @@
     /* ── Collapsible ── */
     .collapsible { overflow: hidden; max-height: 0; opacity: 0; transition: max-height 0.25s ease, opacity 0.2s ease; }
     .collapsible.open { max-height: 80px; opacity: 1; }
+    /* Share settings */
+    .share-settings { overflow: hidden; max-height: 0; transition: max-height 0.25s ease; }
+    .share-settings.open { max-height: 120px; }
+    .share-settings-inner { margin: 0 14px 12px; background: var(--bg); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; }
+    .share-settings-row { display: flex; align-items: center; gap: 10px; }
+    .share-settings-label { font-size: 11px; font-weight: 600; color: var(--text-muted); min-width: 40px; }
 
     /* ── Feedback ── */
     .flash { font-size: 11px; color: var(--green); opacity: 0; transition: opacity 0.2s; min-height: 14px; margin-top: 5px; }
@@ -262,56 +269,86 @@
     /* ── Sidebar sub items ── */
     .nav.sub {
       display: flex; align-items: center; gap: 8px;
-      padding: 6px 10px 6px 14px; border-radius: 6px;
-      font-size: 11px; font-weight: 500; color: var(--text-muted);
+      padding: 7px 10px 7px 14px; border-radius: 7px;
+      font-size: 12px; font-weight: 500; color: var(--text-muted);
       cursor: pointer; transition: background 0.12s, color 0.12s;
       user-select: none;
     }
     .nav.sub:hover  { background: var(--raised); color: var(--text-secondary); }
     .nav.sub.active { background: var(--accent-dim); color: var(--accent); }
 
-    /* ── Draw code box ── */
-    .draw-code-box {
-      background: var(--raised);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 16px;
-      text-align: center;
-    }
-    .draw-code {
-      font-family: 'Cascadia Code', 'Consolas', monospace;
-      font-size: 28px;
-      font-weight: 700;
-      letter-spacing: 6px;
-      color: var(--accent);
-      margin: 10px 0 6px;
-      user-select: all;
-    }
-    .draw-code-hint { font-size: 11px; color: var(--text-muted); }
-
+    /* ── Draw session ── */
     .draw-disabled { opacity: 0.4; pointer-events: none; }
 
-    /* ── Peer list ── */
+    .draw-status-banner {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 13px; border-radius: 8px;
+      font-size: 12px; font-weight: 600;
+      background: var(--raised); border: 1px solid var(--border);
+    }
+    .draw-status-banner.active  { background: rgba(59,165,93,0.08); border-color: rgba(59,165,93,0.25); color: var(--green); }
+    .draw-status-banner.inactive { color: var(--text-muted); }
+    .draw-status-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+    .draw-status-banner.active .draw-status-dot { animation: pulse-dot 2s ease-in-out infinite; }
+    @keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    .draw-code-block {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 16px 14px;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+    }
+    .draw-code-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); }
+    .draw-code-row { display: flex; align-items: center; gap: 10px; }
+    .draw-code {
+      font-family: 'Cascadia Code', 'Consolas', monospace;
+      font-size: 28px; font-weight: 700; letter-spacing: 10px;
+      color: var(--accent); user-select: all;
+    }
+    .draw-copy-btn {
+      width: 30px; height: 30px; flex-shrink: 0;
+      border: 1px solid var(--border); border-radius: 7px;
+      background: var(--raised); color: var(--text-muted);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+    .draw-copy-btn:hover:not(:disabled) { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+    .draw-copy-btn:disabled { opacity: 0.35; cursor: default; }
+    .draw-copy-btn i { font-size: 14px; }
+    .draw-copy-flash { font-size: 11px; color: var(--green); opacity: 0; transition: opacity 0.2s; height: 14px; }
+    .draw-copy-flash.show { opacity: 1; }
+
+    .join-code-input {
+      width: 130px; flex-shrink: 0;
+      background: var(--raised); border: 1px solid var(--border); border-radius: 7px;
+      padding: 8px 11px; color: var(--accent); font-size: 14px; font-weight: 700;
+      letter-spacing: 4px; text-transform: uppercase; outline: none;
+      transition: border-color 0.15s; font-family: 'Cascadia Code', 'Consolas', monospace;
+    }
+    .join-code-input:focus { border-color: var(--accent); }
+    .join-code-input::placeholder { color: var(--text-muted); letter-spacing: 2px; font-size: 12px; font-weight: 400; }
+
     .peer-item {
       display: flex; align-items: center; gap: 10px;
-      padding: 8px 14px; border-bottom: 1px solid var(--border-subtle);
+      padding: 9px 14px; border-bottom: 1px solid var(--border-subtle);
       font-size: 12px; color: var(--text);
     }
     .peer-item:last-child { border-bottom: none; }
-    .peer-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
-    .empty-peers { padding: 16px; text-align: center; font-size: 12px; color: var(--text-muted); }
-
-    /* ── Draw status indicator ── */
-    .draw-status-banner {
-      display: flex; align-items: center; gap: 8px;
-      padding: 8px 12px; border-radius: 8px;
-      font-size: 12px; font-weight: 600;
-      background: var(--raised); border: 1px solid var(--border);
-      margin-bottom: 2px;
+    .peer-avatar {
+      width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+      background: var(--accent-dim); border: 1px solid rgba(88,101,242,0.25);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; color: var(--accent);
     }
-    .draw-status-banner.active { background: rgba(59,165,93,0.1); border-color: rgba(59,165,93,0.3); color: var(--green); }
-    .draw-status-banner.inactive { color: var(--text-muted); }
-    .draw-status-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+    .peer-live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); flex-shrink: 0; margin-left: auto; }
+    .empty-peers { padding: 20px; text-align: center; font-size: 12px; color: var(--text-muted); }
+    .peer-count-badge {
+      background: var(--raised); border: 1px solid var(--border);
+      border-radius: 20px; padding: 1px 8px;
+      font-size: 11px; color: var(--text-muted);
+      text-transform: none; letter-spacing: normal; font-weight: 500;
+    }
 
     /* ── Thème ── */
     .theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
@@ -372,6 +409,8 @@
     <div class="titlebar-left">
       <div class="titlebar-logo"><i class="ti ti-message-2" style="font-size:14px;color:white;"></i></div>
       <span class="titlebar-name">Discord Overlay</span>
+      <span style="width:1px;height:16px;background:var(--border-subtle);margin:0 2px;display:inline-block;"></span>
+      <span style="font-size:11px;color:var(--text-muted);">Paramètres</span>
     </div>
     <div class="titlebar-right">
       <div class="status-badge">
@@ -386,7 +425,7 @@
   <div class="layout">
     <div class="sidebar">
       <!-- Top-level mode tabs -->
-      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);padding:4px 10px 6px;">Mode</div>
+      <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);padding:4px 10px 6px;">Mode</div>
       <div class="nav active" id="mode-overlay" onclick="switchMode('overlay', this)">
         <span class="nav-icon"><i class="ti ti-message-2"></i></span> Overlay
       </div>
@@ -395,27 +434,27 @@
       </div>
 
       <div style="height:1px;background:var(--border-subtle);margin:8px 6px;"></div>
-      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);padding:4px 10px 6px;" id="sidebar-section-label">Overlay</div>
+      <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);padding:4px 10px 6px;" id="sidebar-section-label">Overlay</div>
 
       <!-- Overlay sub-nav -->
       <div id="nav-overlay-group">
         <div class="nav sub active" onclick="showTab('general', this)">
-          <span class="nav-icon"><i class="ti ti-settings"></i></span> Général
+          <span class="nav-icon"><i class="ti ti-settings-2"></i></span> Général
         </div>
         <div class="nav sub" onclick="showTab('affichage', this)">
-          <span class="nav-icon"><i class="ti ti-layout"></i></span> Affichage
+          <span class="nav-icon"><i class="ti ti-layout-dashboard"></i></span> Affichage
         </div>
         <div class="nav sub" onclick="showTab('son', this)">
           <span class="nav-icon"><i class="ti ti-volume"></i></span> Son
         </div>
         <div class="nav sub" onclick="showTab('messages', this)">
-          <span class="nav-icon"><i class="ti ti-message-2"></i></span> Messages
+          <span class="nav-icon"><i class="ti ti-messages"></i></span> Messages
         </div>
         <div class="nav sub" onclick="showTab('youtube', this)">
-          <span class="nav-icon"><i class="ti ti-player-play"></i></span> YouTube
+          <span class="nav-icon"><i class="ti ti-brand-youtube"></i></span> YouTube
         </div>
         <div class="nav sub" onclick="showTab('profils', this)">
-          <span class="nav-icon"><i class="ti ti-folder"></i></span> Profils
+          <span class="nav-icon"><i class="ti ti-folders"></i></span> Profils
         </div>
         <div class="nav sub" onclick="showTab('theme', this)">
           <span class="nav-icon"><i class="ti ti-palette"></i></span> Thème
@@ -425,7 +464,7 @@
       <!-- Dessin sub-nav -->
       <div id="nav-dessin-group" style="display:none;">
         <div class="nav sub active" onclick="showTab('dessin', this)">
-          <span class="nav-icon"><i class="ti ti-pencil"></i></span> Session
+          <span class="nav-icon"><i class="ti ti-users"></i></span> Session
         </div>
       </div>
     </div>
@@ -558,7 +597,7 @@
               </div>
             </div>
             <div class="row-full">
-              <div class="row-sub" style="margin-bottom:5px;">Skip le média en cours</div>
+              <div class="row-sub" style="margin-bottom:5px;">Passer le média en cours</div>
               <div id="skip-hotkey-box" class="hotkey-box" onclick="startRecording('skip')">
                 <span id="skip-hotkey-display">Cliquer pour définir…</span>
                 <span class="hotkey-clear" onclick="clearHotkey(event,'skip')">✕</span>
@@ -769,7 +808,7 @@
           </div>
           <div class="card-body">
             <div id="profile-list">
-              <div class="empty-profiles">Aucun profil sauvegardé</div>
+              <div class="empty-profiles" style="padding:28px;">Aucun profil sauvegardé</div>
             </div>
           </div>
         </div>
@@ -1098,18 +1137,20 @@
       <!-- DESSIN -->
       <div class="tab" id="tab-dessin">
 
+        <!-- Status banner -->
         <div class="draw-status-banner inactive" id="draw-banner">
           <span class="draw-status-dot"></span>
           <span id="draw-banner-text">Session désactivée</span>
         </div>
 
+        <!-- Hôte : activer + partage -->
         <div class="card">
-          <div class="card-header">Session de dessin</div>
+          <div class="card-header">Ma session</div>
           <div class="card-body">
             <div class="row">
               <div class="row-left">
                 <div class="row-label">Activer le dessin</div>
-                <div class="row-sub">Ouvre l'overlay de dessin plein écran</div>
+                <div class="row-sub">Lance la session de dessin en temps réel</div>
               </div>
               <label class="toggle">
                 <input type="checkbox" id="draw-enabled" onchange="toggleDrawEnabled(this.checked)">
@@ -1119,56 +1160,86 @@
             <div class="row">
               <div class="row-left">
                 <div class="row-label">Partager mon écran</div>
-                <div class="row-sub">Ton pote voit une prévisualisation de ton écran en fond</div>
+                <div class="row-sub">Les participants voient votre écran en fond dans leur fenêtre</div>
               </div>
               <label class="toggle">
                 <input type="checkbox" id="draw-share-screen" onchange="toggleShareScreen(this.checked)" disabled>
                 <div class="toggle-track"></div>
               </label>
             </div>
+            <div class="share-settings" id="share-settings-panel">
+              <div class="share-settings-inner">
+                <div class="share-settings-row">
+                  <span class="share-settings-label">Résol.</span>
+                  <div class="chip-group" id="share-res-btns">
+                    <div class="chip" data-res="360p"  onclick="setShareRes(this)">360p</div>
+                    <div class="chip active" data-res="540p"  onclick="setShareRes(this)">540p</div>
+                    <div class="chip" data-res="720p"  onclick="setShareRes(this)">720p</div>
+                    <div class="chip" data-res="1080p" onclick="setShareRes(this)">1080p</div>
+                  </div>
+                </div>
+                <div class="share-settings-row">
+                  <span class="share-settings-label">FPS</span>
+                  <div class="chip-group" id="share-fps-btns">
+                    <div class="chip" data-fps="5"  onclick="setShareFps(this)">5</div>
+                    <div class="chip active" data-fps="10" onclick="setShareFps(this)">10</div>
+                    <div class="chip" data-fps="15" onclick="setShareFps(this)">15</div>
+                    <div class="chip" data-fps="30" onclick="setShareFps(this)">30</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
+        <!-- Code de session -->
         <div class="card">
           <div class="card-header">Code de session</div>
           <div class="card-body">
             <div class="row-full">
-              <div class="draw-code-box">
-                <div class="draw-code-hint" style="margin-bottom:4px;">Donne ce code à ton pote</div>
-                <div class="draw-code" id="draw-code-display">——————</div>
-                <div class="draw-code-hint">Il entre ce code pour rejoindre ta session</div>
-                <button class="btn sm ghost" style="margin-top:10px;" onclick="copyDrawCode()" id="draw-copy-btn" disabled>📋 Copier le code</button>
+              <div class="draw-code-block">
+                <span class="draw-code-label">Partagez ce code avec les participants</span>
+                <div class="draw-code-row">
+                  <span class="draw-code" id="draw-code-display">——————</span>
+                  <button class="draw-copy-btn" id="draw-copy-btn" onclick="copyDrawCode()" disabled title="Copier le code">
+                    <i class="ti ti-copy"></i>
+                  </button>
+                </div>
+                <div class="draw-copy-flash" id="draw-copy-flash">✓ Code copié !</div>
               </div>
             </div>
           </div>
         </div>
 
+        <!-- Participants -->
+        <div class="card">
+          <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+            <span>Participants</span>
+            <span class="peer-count-badge" id="peer-count">0 connecté</span>
+          </div>
+          <div class="card-body">
+            <div id="peer-list">
+              <div class="empty-peers">Aucun participant connecté</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rejoindre -->
         <div class="card">
           <div class="card-header">Rejoindre une session</div>
           <div class="card-body">
             <div class="row-full">
-              <div class="row-sub" style="margin-bottom:6px;">Entre le code de ton pote pour dessiner sur son écran</div>
-              <div class="field-group">
-                <input type="text" id="join-code-input" placeholder="Code (ex: A3F9C2)" maxlength="6"
-                  style="text-transform:uppercase;letter-spacing:3px;font-weight:700;max-width:160px;"
+              <div class="row-sub" style="margin-bottom:8px;">Entrez le code d'un autre utilisateur pour dessiner sur son écran</div>
+              <div style="display:flex;gap:7px;margin-bottom:8px;">
+                <input class="join-code-input" type="text" id="join-code-input" placeholder="A3F9C2" maxlength="6"
                   oninput="this.value=this.value.toUpperCase()">
-                <input type="text" id="join-username" placeholder="Ton pseudo" maxlength="20">
-                <button class="btn" onclick="joinDrawSession()">Rejoindre</button>
+                <input type="text" id="join-username" placeholder="Votre pseudo" maxlength="20">
               </div>
-              <div class="flash" id="join-flash">✓ Connecté à la session !</div>
+              <button class="btn full" onclick="joinDrawSession()">
+                <i class="ti ti-arrow-right" style="font-size:13px;margin-right:4px;"></i>Rejoindre
+              </button>
+              <div class="flash" id="join-flash" style="margin-top:6px;">✓ Connecté à la session !</div>
               <div id="join-error" style="font-size:11px;color:var(--red);opacity:0;transition:opacity 0.2s;margin-top:4px;">✗ Code invalide ou session introuvable</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
-            Participants connectés
-            <span id="peer-count" style="font-size:11px;color:var(--text-muted);text-transform:none;letter-spacing:normal;font-weight:400;">0 pote(s)</span>
-          </div>
-          <div class="card-body">
-            <div id="peer-list">
-              <div class="empty-peers">Personne n'a encore rejoint</div>
             </div>
           </div>
         </div>
@@ -1408,7 +1479,7 @@
       const boxId  = type === 'sound' ? 'hotkey-box' : 'skip-hotkey-box'
       const dispId = type === 'sound' ? 'hotkey-display' : 'skip-hotkey-display'
       document.getElementById(boxId).classList.add('recording')
-      document.getElementById(dispId).textContent = 'En attente…'
+      document.getElementById(dispId).textContent = 'En attente d\'une touche…'
     }
 
     document.addEventListener('keydown', e => {
@@ -1629,22 +1700,44 @@
         ipcRenderer.send('draw-disable')
         document.getElementById('draw-share-screen').checked  = false
         document.getElementById('draw-share-screen').disabled = true
+        document.getElementById('share-settings-panel').classList.remove('open')
       }
     }
 
     function toggleShareScreen(enabled) {
       ipcRenderer.send('draw-set-share-screen', enabled)
+      document.getElementById('share-settings-panel').classList.toggle('open', enabled)
+    }
+
+    function setShareRes(btn) {
+      document.querySelectorAll('#share-res-btns .chip').forEach(b => b.classList.remove('active'))
+      btn.classList.add('active')
+      saveShareSettings()
+    }
+
+    function setShareFps(btn) {
+      document.querySelectorAll('#share-fps-btns .chip').forEach(b => b.classList.remove('active'))
+      btn.classList.add('active')
+      saveShareSettings()
+    }
+
+    function saveShareSettings() {
+      const res = document.querySelector('#share-res-btns .chip.active')?.dataset.res || '540p'
+      const fps = parseInt(document.querySelector('#share-fps-btns .chip.active')?.dataset.fps || '10')
+      ipcRenderer.send('draw-set-share-settings', { shareResolution: res, shareFps: fps })
     }
 
     function copyDrawCode() {
       if (!drawCurrentCode) return
-      navigator.clipboard.writeText(drawCurrentCode).catch(() => {})
-      flashSaved('join-flash')
+      require('electron').clipboard.writeText(drawCurrentCode)
+      const flash = document.getElementById('draw-copy-flash')
+      flash.classList.add('show')
+      setTimeout(() => flash.classList.remove('show'), 2000)
     }
 
     function joinDrawSession() {
       const code     = document.getElementById('join-code-input').value.trim().toUpperCase()
-      const username = document.getElementById('join-username').value.trim() || 'Pote'
+      const username = document.getElementById('join-username').value.trim() || 'Utilisateur'
       if (code.length < 4) return
       ipcRenderer.send('draw-join', { code, username })
     }
@@ -1654,7 +1747,7 @@
       const text   = document.getElementById('draw-banner-text')
       if (enabled) {
         banner.className = 'draw-status-banner active'
-        text.textContent = `Session active — code: ${code}`
+        text.textContent = `Session active — ${code}`
       } else {
         banner.className = 'draw-status-banner inactive'
         text.textContent = 'Session désactivée'
@@ -1665,28 +1758,36 @@
       const list  = document.getElementById('peer-list')
       const count = document.getElementById('peer-count')
       const peers = Object.values(drawPeers)
-      count.textContent = peers.length + ' pote(s)'
+      count.textContent = peers.length === 0 ? '0 connecté' : peers.length + ' connecté' + (peers.length > 1 ? 's' : '')
 
       if (peers.length === 0) {
         list.innerHTML = '<div class="empty-peers">Personne n\'a encore rejoint</div>'
         return
       }
-      list.innerHTML = peers.map(p => `
-        <div class="peer-item">
-          <span class="peer-dot"></span>
-          <span>${p.username || 'Anonyme'}</span>
-        </div>
-      `).join('')
+      list.innerHTML = peers.map(p => {
+        const initial = (p.username || '?').charAt(0).toUpperCase()
+        return `<div class="peer-item">
+          <div class="peer-avatar">${initial}</div>
+          <span style="font-size:13px;">${p.username || 'Anonyme'}</span>
+          <span class="peer-live-dot"></span>
+        </div>`
+      }).join('')
     }
 
     ipcRenderer.on('draw-status', (e, { enabled, code, shareScreen }) => {
       drawCurrentCode = code
-      document.getElementById('draw-enabled').checked        = enabled
-      document.getElementById('draw-share-screen').disabled  = !enabled
-      if (shareScreen !== undefined) document.getElementById('draw-share-screen').checked = shareScreen
+      document.getElementById('draw-enabled').checked       = enabled
+      document.getElementById('draw-share-screen').disabled = !enabled
+      if (shareScreen !== undefined) {
+        document.getElementById('draw-share-screen').checked = shareScreen
+        document.getElementById('share-settings-panel').classList.toggle('open', !!shareScreen)
+      }
       document.getElementById('draw-code-display').textContent = enabled && code ? code : '——————'
       document.getElementById('draw-copy-btn').disabled = !enabled
-      if (!enabled) drawPeers = {}
+      if (!enabled) {
+        drawPeers = {}
+        document.getElementById('share-settings-panel').classList.remove('open')
+      }
       renderPeerList()
       updateDrawBanner(enabled, code)
     })
@@ -1711,7 +1812,13 @@
       }
     })
 
-    // Request initial draw status
+    if (s => s.shareResolution) {
+      ipcRenderer.on('load-settings', (e, s) => {
+        if (s.shareResolution) document.querySelectorAll('#share-res-btns .chip').forEach(b => b.classList.toggle('active', b.dataset.res === s.shareResolution))
+        if (s.shareFps) document.querySelectorAll('#share-fps-btns .chip').forEach(b => b.classList.toggle('active', b.dataset.fps === String(s.shareFps)))
+      })
+    }
+
     ipcRenderer.send('draw-get-status')
 
   </script>
