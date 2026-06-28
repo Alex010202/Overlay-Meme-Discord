@@ -9,6 +9,7 @@ let drawOverlayWindow = null
 let hostDrawOverlay   = null
 let ytView            = null
 let tray              = null
+let endCheckInterval  = null
 
 let _onDrawWindowClosed = null
 
@@ -409,11 +410,28 @@ function createYtView({ videoId, x, y, width, height }) {
   ytView.webContents.on('did-finish-load', inject)
   ytView.webContents.on('dom-ready', inject)
 
-  ytView.webContents.on('did-navigate-in-page', (e, url) => {
-    if (url.includes('youtube.com/watch')) {
+  endCheckInterval = null
+
+const checkEnded = () => {
+  if (!ytView || ytView.webContents.isDestroyed()) {
+    clearInterval(endCheckInterval)
+    return
+  }
+  ytView.webContents.executeJavaScript(`
+    (function() {
+      const video = document.querySelector('video.html5-main-video')
+      if (!video || !video.duration) return 0
+      return video.duration - video.currentTime
+    })()
+  `).then(remaining => {
+    if (remaining > 0 && remaining <= 0.5) {
+      clearInterval(endCheckInterval)
       overlayWindow?.webContents.send('skip-media')
     }
-  })
+  }).catch(() => clearInterval(endCheckInterval))
+}
+
+endCheckInterval = setInterval(checkEnded, 500)
 }
 
 function resizeYtView(bounds) {
@@ -422,6 +440,8 @@ function resizeYtView(bounds) {
 
 function destroyYtView() {
   if (!ytView || !overlayWindow) return
+    clearInterval(endCheckInterval)  // ← ajoute ça
+    endCheckInterval = null
   try { overlayWindow.removeBrowserView(ytView) } catch (err) {
     console.error('Erreur suppression BrowserView:', err.message)
   }
