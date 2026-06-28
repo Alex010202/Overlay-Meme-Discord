@@ -28,6 +28,21 @@
       cursor: crosshair;
     }
 
+    #brush-cursor {
+      position: fixed;
+      pointer-events: none;
+      z-index: 99999;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255,255,255,0.85);
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.5);
+      transform: translate(-50%, -50%);
+      display: none;
+      mix-blend-mode: difference;
+    }
+
+    body.brush-visible #draw-area { cursor: none !important; }
+    body.brush-visible #draw-area canvas { cursor: none !important; }
+
     #draw-area {
       position: fixed;
       top: 10%;
@@ -501,6 +516,7 @@
 </head>
 <body>
 
+<div id="brush-cursor"></div>
 <div id="draw-border-hint"></div>
   <div id="screen-border"></div>
 <div id="draw-area">
@@ -642,6 +658,9 @@
   </button>
   <button class="tb-btn" id="tool-eraser" data-tip="Gomme (E)"      onclick="setTool('eraser')">
     <svg viewBox="0 0 24 24"><path d="M20 20H7L3 16l11-11 6 6-3.5 3.5"/><line x1="6" y1="14" x2="14" y2="6"/></svg>
+  </button>
+  <button class="tb-btn" id="tool-fill" data-tip="Remplissage (F)" onclick="setTool('fill')">
+    <svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 11l-8-8-8.5 8.5a5.5 5.5 0 007.78 7.78L19 11z"/><path d="M20 12s2 2 2 4a2 2 0 01-4 0c0-2 2-4 2-4z"/></svg>
   </button>
 
   <div class="sep"></div>
@@ -844,12 +863,113 @@ let currentTool  = 'pen'
 let currentColor = '#ff4455'
 let brushSize    = 6
 let brushOpacity = 0.9
+const brushCursorEl = document.getElementById('brush-cursor')
+function updateBrushCursor(clientX, clientY) {
+  const rect = drawArea.getBoundingClientRect()
+  const inside = clientX >= rect.left && clientX <= rect.right &&
+                 clientY >= rect.top  && clientY <= rect.bottom
+  const showCircle = inside && (currentTool === 'pen' || currentTool === 'eraser' || currentTool === 'fill')
+  if (showCircle) {
+    const scaleX = areaW / CANVAS_W
+    const displaySize = (currentTool === 'eraser' ? brushSize * 2 : brushSize) * scaleX
+    brushCursorEl.style.width  = displaySize + 'px'
+    brushCursorEl.style.height = displaySize + 'px'
+    brushCursorEl.style.left   = clientX + 'px'
+    brushCursorEl.style.top    = clientY + 'px'
+    brushCursorEl.style.display = 'block'
+    document.body.classList.add('brush-visible')
+  } else {
+    brushCursorEl.style.display = 'none'
+    document.body.classList.remove('brush-visible')
+  }
+}
+drawArea.addEventListener('mouseleave', () => {
+  brushCursorEl.style.display = 'none'
+  document.body.classList.remove('brush-visible')
+})
+
 function setTool(tool) {
   currentTool = tool
   document.querySelectorAll('.tb-btn[id^="tool-"]').forEach(b => b.classList.remove('active'))
   document.getElementById('tool-' + tool)?.classList.add('active')
-  drawArea.style.cursor = tool === 'eraser' ? 'cell' : 'crosshair'
+  drawArea.style.cursor = tool === 'eraser' ? 'cell' : (tool === 'fill' ? 'crosshair' : 'crosshair')
   updateSizePreview()
+}
+
+function hexToRgba(hex, opacity) {
+  const r = parseInt(hex.slice(1,3),16)
+  const g = parseInt(hex.slice(3,5),16)
+  const b = parseInt(hex.slice(5,7),16)
+  return [r, g, b, Math.round(opacity * 255)]
+}
+function floodFill(startX, startY, fillColor) {
+  const imgData = ctx.getImageData(0, 0, CANVAS_W, CANVAS_H)
+  const data = imgData.data
+  const W = CANVAS_W, H = CANVAS_H
+  const sx = Math.round(startX), sy = Math.round(startY)
+  if (sx < 0 || sx >= W || sy < 0 || sy >= H) return
+
+  const idx = (sy * W + sx) * 4
+  const targetR = data[idx], targetG = data[idx+1], targetB = data[idx+2], targetA = data[idx+3]
+
+  const [fillR, fillG, fillB, fillA] = fillColor
+  const bgR = 0x11, bgG = 0x12, bgB = 0x14
+  const a = fillA / 255
+  const composedR = Math.round(fillR * a + bgR * (1 - a))
+  const composedG = Math.round(fillG * a + bgG * (1 - a))
+  const composedB = Math.round(fillB * a + bgB * (1 - a))
+  const outR = composedR, outG = composedG, outB = composedB, outA = 255
+
+  if (targetR===outR && targetG===outG && targetB===outB && targetA===outA) return
+
+  const tolerance = 80
+  function colorDist(i) {
+    return Math.abs(data[i]-targetR) +
+           Math.abs(data[i+1]-targetG) +
+           Math.abs(data[i+2]-targetB) +
+           Math.abs(data[i+3]-targetA)
+  }
+
+  const filled = new Uint8Array(W * H)
+  const stack = [[sx, sy]]
+  while (stack.length) {
+    const [x, y] = stack.pop()
+    if (x < 0 || x >= W || y < 0 || y >= H) continue
+    const vi = y * W + x
+    if (filled[vi]) continue
+    const i = vi * 4
+    if (colorDist(i) > tolerance * 8) continue
+    filled[vi] = 1
+    data[i] = outR; data[i+1] = outG; data[i+2] = outB; data[i+3] = outA
+    stack.push([x+1,y],[x-1,y],[x,y+1],[x,y-1])
+  }
+
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const vi = y * W + x
+      if (filled[vi]) continue
+      const i = vi * 8
+      if (data[i+3] === 0) continue
+      const hasFilledNeighbor =
+        (x > 0   && filled[vi-1]) ||
+        (x < W-1 && filled[vi+1]) ||
+        (y > 0   && filled[vi-W]) ||
+        (y < H-1 && filled[vi+W])
+      if (!hasFilledNeighbor) continue
+      const t = 1 - (data[i+3] / 255)
+      const srcA2 = a * t
+      const dstA2 = data[i+3] / 255
+      const blendA = srcA2 + dstA2 * (1 - srcA2)
+      if (blendA > 0) {
+        data[i]   = Math.round((fillR * srcA2 + data[i]   * dstA2 * (1-srcA2)) / blendA)
+        data[i+1] = Math.round((fillG * srcA2 + data[i+1] * dstA2 * (1-srcA2)) / blendA)
+        data[i+2] = Math.round((fillB * srcA2 + data[i+2] * dstA2 * (1-srcA2)) / blendA)
+        data[i+3] = Math.round(blendA * 255)
+      }
+    }
+  }
+
+  ctx.putImageData(imgData, 0, 0)
 }
 function setColorDot(el) {
   currentColor = el.dataset.color
@@ -933,7 +1053,6 @@ function isOnToolbar(e) {
 window.addEventListener('mousedown', e => {
   if (currentMode !== 'draw') return
   if (isOnToolbar(e)) return
-  // Ignore clicks outside the draw area
   const rect = drawArea.getBoundingClientRect()
   if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) return
   e.preventDefault()
@@ -942,7 +1061,18 @@ window.addEventListener('mousedown', e => {
   const p = toCanvasClamped(e.clientX, e.clientY)
   lastX = p.x; lastY = p.y; startX = p.x; startY = p.y
   saveSnapshot()
-  if (currentTool === 'pen' || currentTool === 'eraser') {
+  if (currentTool === 'fill') {
+    const fillColor = hexToRgba(currentColor, brushOpacity)
+    floodFill(p.x, p.y, fillColor)
+    checkEmptyState()
+    ipcRenderer.send('draw-sync', {
+      type: 'fill',
+      x: p.x / CANVAS_W, y: p.y / CANVAS_H,
+      color: currentColor, opacity: brushOpacity
+    })
+    isDrawing = false
+    document.body.classList.remove('drawing')
+  } else if (currentTool === 'pen' || currentTool === 'eraser') {
     ctx.beginPath(); ctx.moveTo(lastX, lastY)
   } else {
     previewSnap = captureState()
@@ -950,6 +1080,7 @@ window.addEventListener('mousedown', e => {
 })
 let _lastCursorSend = 0
 window.addEventListener('mousemove', e => {
+  updateBrushCursor(e.clientX, e.clientY)
   if (currentMode !== 'draw') return
   const p = toCanvasClamped(e.clientX, e.clientY)
   const now = Date.now()
@@ -1030,6 +1161,10 @@ function applyRemote(data) {
   else if (data.type==='eraser') eraseAt(ctx,data.x*W,data.y*H,data.size)
   else if (['line','rect','circle','arrow'].includes(data.type))
     drawShape(ctx,data.type,data.x0*W,data.y0*H,data.x1*W,data.y1*H,color,size)
+  else if (data.type==='fill') {
+    floodFill(data.x*W, data.y*H, hexToRgba(data.color||'#ff4455', data.opacity??0.9))
+    checkEmptyState()
+  }
   else if (data.type==='clear') { ctx.clearRect(0,0,CANVAS_W,CANVAS_H); checkEmptyState() }
   else if (data.type==='undo'||data.type==='full-sync') {
     if (data.dataUrl) {
@@ -1259,7 +1394,7 @@ document.addEventListener('keydown', e => {
     if (e.key === 'Escape' || e.key === 'Delete') cancelFilePreview()
     return
   }
-  const km={p:'pen',l:'line',r:'rect',c:'circle',a:'arrow',e:'eraser'}
+  const km={p:'pen',l:'line',r:'rect',c:'circle',a:'arrow',e:'eraser',f:'fill'}
   if (km[e.key]) setTool(km[e.key])
 })
 
@@ -1313,7 +1448,6 @@ function sendGifFromInputUrl() {
 
   if (!url) { errEl.textContent = 'Entre un lien.'; errEl.style.display = 'block'; return }
 
-  // Affiche un aperçu d'abord
   prevImg.src = url
   prevImg.onload = () => {
     prevBox.style.display = 'block'
@@ -1341,11 +1475,6 @@ function openGifPicker() {
   loadTrending()
 }
 
-// Klipy endpoints:
-// Trending GIF : GET /api/v1/{KEY}/gifs/trending?locale=fr_FR&limit=20&page=0
-// Search GIF   : GET /api/v1/{KEY}/gifs/search?search=cats&locale=fr_FR&limit=20&page=0
-// Trending Sticker : /stickers/trending  |  Search Sticker: /stickers/search
-
 async function klipyFetch(path, params = {}) {
   const url = new URL(`${KLIPY_BASE}/${KLIPY_KEY}${path}`)
   //url.searchParams.set('locale', 'fr_FR')
@@ -1357,15 +1486,12 @@ async function klipyFetch(path, params = {}) {
   const r = await fetch(url)
   const json = await r.json()
   console.log('[GIF] response status:', r.status, '| keys:', Object.keys(json))
-  // Log first item structure if array found
   const arr = json.data || json.results || json.gifs || json.items || (Array.isArray(json) ? json : null)
   if (arr && arr[0]) console.log('[GIF] first item keys:', Object.keys(arr[0]), '| media keys:', arr[0].media ? Object.keys(arr[0].media) : 'no media')
   if (!r.ok) throw new Error(`Klipy HTTP ${r.status}: ${JSON.stringify(json)}`)
   return json
 }
 
-// Parse Klipy response: { result: true, data: { data: [...] } }
-// Each item: { id, slug, title, file: { hd: { gif: { url } }, sd: { gif: { url } } } }
 function parseKlipyResults(data) {
   const arr = data?.data?.data || data?.data || (Array.isArray(data) ? data : null)
   if (!arr || !Array.isArray(arr)) {
@@ -1461,7 +1587,6 @@ function onGifSearch(val) {
   gifSearchTimer = setTimeout(() => searchGifs(val.trim()), 350)
 }
 
-// Infinite scroll
 document.getElementById('gif-grid').addEventListener('scroll', function() {
   if (this.scrollHeight - this.scrollTop - this.clientHeight < 80 && gifNextPos) {
     if (gifCurrentQ) searchGifs(gifCurrentQ, true)
@@ -1493,9 +1618,7 @@ function detectMediaType(url) {
   return 'image' // gif, png, jpg, webp, etc.
 }
 
-// Résout les liens Discord "images-ext" qui wrappent une URL externe
 function resolveDiscordExternalUrl(url) {
-  // https://images-ext-1.discordapp.net/external/HASH/https/media.tenor.com/...
   const extMatch = url.match(/images-ext-\d+\.discordapp\.net\/external\/[^/]+\/https?\/(.+)/)
   if (extMatch) return 'https://' + extMatch[1]
   return url
@@ -1513,7 +1636,6 @@ function sendGifFromUrl(url, title) {
       return r.blob()
     })
     .then(blob => {
-      // Force le bon mime type pour les mp4 si le serveur renvoie octet-stream
       const mime = blob.type && blob.type !== 'application/octet-stream'
         ? blob.type
         : (mediaType === 'video' ? 'video/mp4' : 'image/gif')
@@ -1572,7 +1694,6 @@ function sendGifFromInputUrl() {
   const mediaType = detectMediaType(url)
 
   if (mediaType === 'video') {
-    // Pour les vidéos, on affiche un aperçu vidéo
     prevImg.style.display = 'none'
     let previewVid = document.getElementById('gif-url-preview-vid')
     if (!previewVid) {
@@ -1588,7 +1709,6 @@ function sendGifFromInputUrl() {
     flash('Aperçu vidéo — chargement…')
     sendGifFromUrl(input.value.trim(), 'Vidéo via URL')
   } else {
-    // Image / GIF — aperçu classique
     let previewVid = document.getElementById('gif-url-preview-vid')
     if (previewVid) previewVid.style.display = 'none'
     prevImg.style.display = 'block'

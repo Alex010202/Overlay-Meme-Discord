@@ -78,6 +78,86 @@ function drawShape(tool, x0, y0, x1, y1, color, size) {
   }
 }
 
+function floodFillHost(startX, startY, hex, opacity) {
+  const W = canvas.width, H = canvas.height
+  const imgData = ctx.getImageData(0, 0, W, H)
+  const data = imgData.data
+  const sx = Math.round(startX), sy = Math.round(startY)
+  if (sx < 0 || sx >= W || sy < 0 || sy >= H) return
+  const idx = (sy * W + sx) * 4
+  const targetR = data[idx], targetG = data[idx+1], targetB = data[idx+2], targetA = data[idx+3]
+  const fillR = parseInt(hex.slice(1,3),16)
+  const fillG = parseInt(hex.slice(3,5),16)
+  const fillB = parseInt(hex.slice(5,7),16)
+  const fillA = Math.round(opacity * 255)
+  if (targetR===fillR && targetG===fillG && targetB===fillB && targetA===fillA) return
+  const tolerance = 15
+  function colorDist(i) {
+    return Math.abs(data[i]-targetR) +
+           Math.abs(data[i+1]-targetG) +
+           Math.abs(data[i+2]-targetB) +
+           Math.abs(data[i+3]-targetA)
+  }
+  const filled = new Uint8Array(W * H)
+  const stack = [[sx, sy]]
+  while (stack.length) {
+    const [x, y] = stack.pop()
+    if (x < 0 || x >= W || y < 0 || y >= H) continue
+    const vi = y * W + x
+    if (filled[vi]) continue
+    const i = vi * 4
+    if (colorDist(i) > tolerance * 4) continue
+    filled[vi] = 1
+    const srcA = fillA / 255
+    const dstA = data[i+3] / 255
+    const outA = srcA + dstA * (1 - srcA)
+    if (outA > 0) {
+      data[i]   = Math.round((fillR * srcA + data[i]   * dstA * (1-srcA)) / outA)
+      data[i+1] = Math.round((fillG * srcA + data[i+1] * dstA * (1-srcA)) / outA)
+      data[i+2] = Math.round((fillB * srcA + data[i+2] * dstA * (1-srcA)) / outA)
+      data[i+3] = Math.round(outA * 255)
+    }
+    stack.push([x+1,y],[x-1,y],[x,y+1],[x,y-1])
+  }
+  // Pass 2 : smooth bords antialiasés
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const vi = y * W + x
+      if (filled[vi]) continue
+      const i = vi * 4
+      if (data[i+3] === 0) continue
+      const hasFilledNeighbor =
+        (x > 0   && filled[vi-1]) ||
+        (x < W-1 && filled[vi+1]) ||
+        (y > 0   && filled[vi-W]) ||
+        (y < H-1 && filled[vi+W])
+      if (!hasFilledNeighbor) continue
+      const t = 1 - (data[i+3] / 255)
+      const srcA = (fillA / 255) * t
+      const dstA = data[i+3] / 255
+      const outA = srcA + dstA * (1 - srcA)
+      if (outA > 0) {
+        data[i]   = Math.round((fillR * srcA + data[i]   * dstA * (1-srcA)) / outA)
+        data[i+1] = Math.round((fillG * srcA + data[i+1] * dstA * (1-srcA)) / outA)
+        data[i+2] = Math.round((fillB * srcA + data[i+2] * dstA * (1-srcA)) / outA)
+        data[i+3] = Math.round(outA * 255)
+      }
+    }
+  }
+  ctx.putImageData(imgData, 0, 0)
+}
+
+// Le peer dessine dans une draw-area à top:10% left:10% width:80% height:80%
+// Les coords 0→1 sont relatives à cette zone — on remet dans ce même espace ici
+function toHostPx(nx, ny) {
+  const W = canvas.width
+  const H = canvas.height
+  return {
+    x: (W * 0.1) + nx * (W * 0.8),
+    y: (H * 0.1) + ny * (H * 0.8)
+  }
+}
+
 function applyStroke(data) {
   const W = canvas.width
   const H = canvas.height
@@ -89,17 +169,26 @@ function applyStroke(data) {
   const size  = data.size || 6
 
   if (data.type === 'pen') {
-    drawLine(data.x0 * W, data.y0 * H, data.x1 * W, data.y1 * H, color, size)
+    const p0 = toHostPx(data.x0, data.y0), p1 = toHostPx(data.x1, data.y1)
+    drawLine(p0.x, p0.y, p1.x, p1.y, color, size)
   } else if (data.type === 'eraser') {
-    eraseAt(data.x * W, data.y * H, data.size)
+    const p = toHostPx(data.x, data.y)
+    eraseAt(p.x, p.y, data.size)
   } else if (data.type === 'line' || data.type === 'rect' || data.type === 'arrow') {
-    drawShape(data.type, data.x0 * W, data.y0 * H, data.x1 * W, data.y1 * H, color, size)
+    const p0 = toHostPx(data.x0, data.y0), p1 = toHostPx(data.x1, data.y1)
+    drawShape(data.type, p0.x, p0.y, p1.x, p1.y, color, size)
+  } else if (data.type === 'fill') {
+    const p = toHostPx(data.x, data.y)
+    floodFillHost(p.x, p.y, data.color || '#ff4444', data.opacity || 0.9)
   } else if (data.type === 'clear') {
     ctx.clearRect(0, 0, W, H)
   } else if (data.type === 'undo' || data.type === 'full-sync') {
     if (data.dataUrl) {
       const img = new Image()
-      img.onload = () => { ctx.clearRect(0, 0, W, H); ctx.drawImage(img, 0, 0, W, H) }
+      img.onload = () => {
+        ctx.clearRect(0, 0, W, H)
+        ctx.drawImage(img, W * 0.1, H * 0.1, W * 0.8, H * 0.8)
+      }
       img.src = data.dataUrl
     } else {
       ctx.clearRect(0, 0, W, H)
