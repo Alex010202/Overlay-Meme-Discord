@@ -114,38 +114,58 @@ const fileLayer  = document.getElementById('file-layer')
 const activeFiles = new Map()
 
 function showRemoteFile(data) {
-  const { id, dataUrl, x, y, width, height, duration } = data
+  const { id, dataUrl, x, y, width, height, duration, fileType } = data
   if (!dataUrl || !id) return
   const W = window.innerWidth
   const H = window.innerHeight
 
-  const img = document.createElement('img')
-  img.src = dataUrl
-  img.dataset.relX = x
-  img.dataset.relY = y
-  img.dataset.relW = width
-  img.dataset.relH = height
-  img.style.position      = 'absolute'
-  img.style.left          = (x * W) + 'px'
-  img.style.top           = (y * H) + 'px'
-  img.style.width         = (width  * W) + 'px'
-  img.style.height        = (height * H) + 'px'
-  img.style.borderRadius  = '8px'
-  img.style.boxShadow     = '0 10px 36px rgba(0,0,0,0.55)'
-  img.style.opacity       = '0'
-  img.style.transform     = 'scale(0.96)'
-  img.style.transition    = 'opacity .25s ease, transform .25s ease'
-  img.style.objectFit     = 'contain'
+  let el
+  if (fileType === 'video') {
+    el = document.createElement('video')
+    el.src = dataUrl
+    el.autoplay = true
+    el.loop = true
+    el.muted = false
+    el.playsInline = true
+    el.controls = false
+    el.style.objectFit = 'contain'
+  } else if (fileType === 'audio') {
+    el = document.createElement('audio')
+    el.src = dataUrl
+    el.autoplay = true
+    el.controls = true
+    el.style.height = '54px'
+    el.style.width  = '100%'
+  } else {
+    el = document.createElement('img')
+    el.src = dataUrl
+    el.style.objectFit = 'contain'
+  }
 
-  fileLayer.appendChild(img)
+  el.dataset.relX = x
+  el.dataset.relY = y
+  el.dataset.relW = width
+  el.dataset.relH = height
+  el.style.position      = 'absolute'
+  el.style.left          = (x * W) + 'px'
+  el.style.top           = (y * H) + 'px'
+  el.style.width         = (width  * W) + 'px'
+  el.style.height        = (height * H) + 'px'
+  el.style.borderRadius  = '8px'
+  el.style.boxShadow     = '0 10px 36px rgba(0,0,0,0.55)'
+  el.style.opacity       = '0'
+  el.style.transform     = 'scale(0.96)'
+  el.style.transition    = 'opacity .25s ease, transform .25s ease'
+
+  fileLayer.appendChild(el)
   requestAnimationFrame(() => {
-    img.style.opacity   = '1'
-    img.style.transform = 'scale(1)'
+    el.style.opacity   = '1'
+    el.style.transform = 'scale(1)'
   })
 
   const dur   = Math.max(500, duration || 5000)
   const timer = setTimeout(() => removeFile(id), dur)
-  activeFiles.set(id, { img, timer })
+  activeFiles.set(id, { img: el, timer })
 }
 
 function removeFile(id) {

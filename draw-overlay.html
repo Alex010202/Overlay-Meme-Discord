@@ -30,8 +30,43 @@
 
     #draw-area {
       position: fixed;
-      inset: 0;
+      top: 10%;
+      left: 10%;
+      width: 80%;
+      height: 80%;
       overflow: hidden;
+      border-radius: 12px;
+      box-shadow: 0 0 0 2px rgba(124,111,247,0.35), 0 8px 40px rgba(0,0,0,0.6);
+      transition: box-shadow 0.2s, border-radius 0.2s, overflow 0s;
+      background: transparent;
+    }
+    body.file-mode #draw-area {
+      box-shadow: 0 0 0 1.5px rgba(124,111,247,0.6);
+      border-radius: 12px;
+      overflow: visible;
+    }
+    body.gif-mode #draw-area {
+      box-shadow: none;
+      border-radius: 0;
+      overflow: visible;
+    }
+
+    /* Overlay autour de la zone de dessin */
+    #draw-border-hint {
+      position: fixed;
+      top: 10%; left: 10%;
+      width: 80%; height: 80%;
+      border-radius: 12px;
+      pointer-events: none;
+      z-index: 10000;
+      border: 1.5px solid rgba(124,111,247,0.25);
+      transition: border-color 0.2s, opacity 0.2s;
+    }
+    body.drawing #draw-border-hint {
+      border-color: rgba(124,111,247,0.6);
+    }
+    body.gif-mode #draw-border-hint {
+      opacity: 0;
     }
 
     #draw-area-label {
@@ -169,7 +204,7 @@
       pointer-events: none;
       transition: opacity 0.18s;
     }
-    body:not(.drawing):not(.file-mode):hover #toolbar {
+    body:not(.drawing):not(.file-mode):not(.gif-mode):hover #toolbar {
       opacity: 1;
       pointer-events: auto;
     }
@@ -361,8 +396,27 @@
       z-index: 3;
       cursor: pointer;
     }
+    body.file-mode #file-dropzone {
+      position: fixed;
+      top: 10%; left: 10%;
+      width: 80%; height: 80%;
+      inset: unset;
+      background: #111214;
+      border-radius: 12px;
+    }
     body.file-mode:not(.has-file-preview) #file-dropzone { display: flex; }
     #file-dropzone.drag-over { background: rgba(124,111,247,0.06); }
+
+    #file-preview-box {
+      position: fixed;
+      display: none;
+      border: 2px solid var(--accent2);
+      border-radius: 6px;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.6);
+      z-index: 4;
+      cursor: grab;
+    }
+    body.file-mode.has-file-preview #file-preview-box { display: block; }
     .fd-icon {
       width: 52px; height: 52px; border-radius: 14px;
       background: var(--surface2); border: 1px solid var(--border);
@@ -373,18 +427,6 @@
     .fd-icon svg { width: 24px; height: 24px; stroke: var(--accent2); fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
     .fd-title { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.55); pointer-events: none; }
     .fd-sub { font-size: 11px; color: var(--dim); pointer-events: none; }
-
-    
-    #file-preview-box {
-      position: absolute;
-      display: none;
-      border: 2px solid var(--accent2);
-      border-radius: 6px;
-      box-shadow: 0 8px 28px rgba(0,0,0,0.6);
-      z-index: 4;
-      cursor: grab;
-    }
-    body.file-mode.has-file-preview #file-preview-box { display: block; }
     #file-preview-box img { width: 100%; height: 100%; object-fit: contain; border-radius: 4px; pointer-events: none; user-select: none; -webkit-user-drag: none; }
     #file-preview-box.dragging { cursor: grabbing; }
     .fpb-handle {
@@ -401,10 +443,66 @@
       cursor: pointer; border: 2px solid var(--surface);
       font-size: 13px; line-height: 1;
     }
+    /* ── GIF picker ────────────────────────────────────────── */
+    #gif-picker { display:none; }
+    body.gif-mode #gif-picker { display:flex !important; }
+    body.gif-mode #mode-switch { opacity:1!important; pointer-events:auto!important; }
+
+    .gif-tab {
+      padding: 5px 11px;
+      border: none; border-radius: 7px;
+      background: transparent; color: var(--dim);
+      font-family: inherit; font-size: 11px; font-weight: 600;
+      cursor: pointer; transition: background .12s, color .12s;
+    }
+    .gif-tab:hover  { background: var(--surface2); color: var(--text); }
+    .gif-tab.active { background: rgba(124,111,247,.18); color: var(--accent2); }
+
+    .gif-item {
+      position: relative; border-radius: 8px; overflow: hidden;
+      cursor: pointer;
+      background: var(--surface2);
+      transition: transform .12s, box-shadow .12s;
+      break-inside: avoid;
+      aspect-ratio: unset;
+      height: 175px;
+    }
+    .gif-item:hover { transform: scale(1.03); box-shadow: 0 4px 16px rgba(0,0,0,.6); }
+    .gif-item img, .gif-item video {
+      width: 100%; height: 100%; object-fit: cover;
+      display: block; border-radius: 8px;
+    }
+    .gif-item-label {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      padding: 16px 6px 5px;
+      background: linear-gradient(transparent, rgba(0,0,0,.6));
+      font-size: 10px; font-weight: 600; color: white;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    /* category cards (trending empty state) */
+    .gif-cat {
+      position: relative; border-radius: 8px; overflow: hidden;
+      aspect-ratio: 1/1; cursor: pointer;
+      background: var(--surface2); display:flex;
+      align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: white;
+      transition: transform .12s, box-shadow .12s;
+    }
+    .gif-cat:hover { transform:scale(1.03); box-shadow:0 4px 16px rgba(0,0,0,.6); }
+    .gif-cat img { position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:8px;opacity:.55; }
+    .gif-cat span { position:relative;z-index:1;text-shadow:0 2px 8px rgba(0,0,0,.8); }
+
+    #gif-grid::-webkit-scrollbar { width: 4px; }
+    #gif-grid::-webkit-scrollbar-track { background: transparent; }
+    #gif-grid::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+    
   </style>
 </head>
 <body>
 
+<div id="draw-border-hint"></div>
+  <div id="screen-border"></div>
 <div id="draw-area">
   <span id="draw-area-label"></span>
   <canvas id="canvas-bg"></canvas>
@@ -416,14 +514,16 @@
     <div class="fd-icon">
       <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
     </div>
-    <div class="fd-title">Dépose une image ici</div>
-    <div class="fd-sub">ou clique pour parcourir — elle s'affichera sur l'écran de ton pote</div>
+    <div class="fd-title">Dépose un fichier ici</div>
+    <div class="fd-sub">image, vidéo (mp4/webm), gif, audio — il s'affichera sur l'écran de ton pote</div>
   </div>
-  <input type="file" id="file-input" accept="image/*" style="display:none" onchange="onFileInputChange(event)">
+  <input type="file" id="file-input" accept="image/*,video/*,audio/*,.gif,.mp4,.webm,.mov,.mp3,.ogg,.wav" style="display:none" onchange="onFileInputChange(event)">
 
   
   <div id="file-preview-box">
     <img id="file-preview-img" alt="">
+    <video id="file-preview-vid" autoplay loop muted playsinline style="display:none;width:100%;height:100%;object-fit:contain;border-radius:4px;pointer-events:none;"></video>
+    <audio id="file-preview-aud" controls style="display:none;width:100%;position:absolute;bottom:8px;left:0;pointer-events:auto;"></audio>
     <div class="fpb-remove" onclick="cancelFilePreview(event)">✕</div>
     <div class="fpb-handle" onmousedown="startResizePreview(event)"></div>
   </div>
@@ -457,6 +557,57 @@
   </div>
 </div>
 
+<!-- GIF Picker — fixed, plein écran, hors de draw-area -->
+<div id="gif-picker" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;">
+  <div style="width:480px;max-width:95vw;height:560px;max-height:90vh;background:var(--surface);border:1px solid var(--border);border-radius:16px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,0.8);">
+    <!-- Header tabs -->
+    <div id="gif-header" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);flex-shrink:0;">
+      <div style="display:flex;gap:4px;flex-shrink:0;">
+        <button class="gif-tab active" id="gif-tab-search" onclick="setGifTab('search')">GIF</button>
+        <button class="gif-tab" id="gif-tab-sticker" onclick="setGifTab('sticker')">Autocollants</button>
+        <button class="gif-tab" id="gif-tab-emoji" onclick="setGifTab('emoji')">Émoji</button>
+        <button class="gif-tab" id="gif-tab-url" onclick="setGifTab('url')">URL</button>
+      </div>
+      <div style="flex:1;position:relative;">
+        <input id="gif-search-input" type="text" placeholder="Rechercher un GIF…" autocomplete="off"
+          style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+          padding:7px 12px 7px 32px;font-size:12px;color:var(--text);outline:none;font-family:inherit;"
+          oninput="onGifSearch(this.value)" onkeydown="if(event.key==='Escape')switchMode('draw')">
+        <svg style="position:absolute;left:9px;top:50%;transform:translateY(-50%);width:13px;height:13px;stroke:var(--dim);fill:none;stroke-width:2;stroke-linecap:round;" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      </div>
+      <button onclick="switchMode('draw')" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:16px;padding:4px 6px;border-radius:6px;line-height:1;" title="Fermer">✕</button>
+    </div>
+    <!-- Grid -->
+    <div id="gif-grid" style="flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(2,1fr);gap:6px;padding:10px;align-content:start;">
+      <div id="gif-loading" style="text-align:center;padding:40px;color:var(--dim);font-size:12px;">Chargement…</div>
+    </div>
+    <!-- URL panel -->
+    <div id="gif-url-panel" style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:30px 24px;flex:1;">
+      <div style="font-size:12px;font-weight:600;color:var(--dim);text-align:center;line-height:1.6;">
+        Colle un lien GIF (Tenor, Giphy, direct .gif…)
+      </div>
+      <div style="width:100%;position:relative;">
+        <input id="gif-url-input" type="text" placeholder="https://media.tenor.com/…" autocomplete="off"
+          style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+          padding:9px 12px 9px 36px;font-size:12px;color:var(--text);outline:none;font-family:inherit;box-sizing:border-box;"
+          onkeydown="if(event.key==='Enter')sendGifFromInputUrl()">
+        <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;stroke:var(--dim);fill:none;stroke-width:2;stroke-linecap:round;" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+      </div>
+      <button onclick="sendGifFromInputUrl()" style="background:var(--accent);color:white;border:none;border-radius:9px;padding:9px 22px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;width:100%;transition:background .12s;" onmouseover="this.style.background='var(--accent2)'" onmouseout="this.style.background='var(--accent)'">
+        Envoyer le GIF
+      </button>
+      <div id="gif-url-preview" style="display:none;width:100%;border-radius:8px;overflow:hidden;border:1px solid var(--border);">
+        <img id="gif-url-preview-img" style="width:100%;display:block;max-height:180px;object-fit:contain;background:var(--surface2);" alt="">
+      </div>
+      <div id="gif-url-error" style="display:none;font-size:11px;color:var(--danger);text-align:center;"></div>
+    </div>
+    <!-- Footer -->
+    <div style="text-align:center;padding:5px;border-top:1px solid var(--border);flex-shrink:0;">
+      <span style="font-size:9px;color:var(--dim);letter-spacing:.05em;">Powered by KLIPY</span>
+    </div>
+  </div>
+</div>
+
 <div id="mode-switch">
   <button class="mode-btn active" id="mode-btn-draw" onclick="switchMode('draw')">
     <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
@@ -465,6 +616,10 @@
   <button class="mode-btn" id="mode-btn-file" onclick="switchMode('file')">
     <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
     Fichier
+  </button>
+  <button class="mode-btn" id="mode-btn-gif" onclick="switchMode('gif')">
+    <svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M8 12h-2v-2h2M12 10v4M15 10h3v1.5h-2V14h2"/><text x="6.5" y="14.5" font-size="5" fill="currentColor" stroke="none" font-weight="700"></text></svg>
+    GIF
   </button>
 </div>
 
@@ -634,10 +789,11 @@ function drawBg() {
   }
 }
 function layoutDrawArea() {
-  areaW = window.innerWidth
-  areaH = window.innerHeight
-  areaX = 0
-  areaY = 0
+  const rect = drawArea.getBoundingClientRect()
+  areaX = rect.left
+  areaY = rect.top
+  areaW = rect.width
+  areaH = rect.height
   const snap = (canvas.width > 0 && !isCanvasBlank()) ? captureState() : null
   canvas.width  = CANVAS_W
   canvas.height = CANVAS_H
@@ -669,11 +825,18 @@ updateHistoryUI()
 let currentMode = 'draw'
 function switchMode(mode) {
   currentMode = mode
+  canvas.style.display = (mode === 'draw') ? 'block' : 'none'
+  canvasBg.style.display = (mode === 'draw') ? 'block' : 'none'
+  toolbar.style.opacity      = (mode === 'draw') ? '' : '0'
+  toolbar.style.pointerEvents = (mode === 'draw') ? '' : 'none' 
   document.body.classList.toggle('file-mode', mode === 'file')
+  document.body.classList.toggle('gif-mode',  mode === 'gif')
   document.getElementById('mode-btn-draw').classList.toggle('active', mode === 'draw')
   document.getElementById('mode-btn-file').classList.toggle('active', mode === 'file')
+  document.getElementById('mode-btn-gif').classList.toggle('active',  mode === 'gif')
   document.getElementById('toolbar-file').classList.toggle('show', mode === 'file')
-  drawArea.style.cursor = mode === 'file' ? 'default' : (currentTool === 'eraser' ? 'cell' : 'crosshair')
+  drawArea.style.cursor = (mode === 'file' || mode === 'gif') ? 'default' : (currentTool === 'eraser' ? 'cell' : 'crosshair')
+  if (mode === 'gif') openGifPicker()
   checkEmptyState()
 }
 
@@ -759,12 +922,20 @@ function commitShape(p) {
   previewSnap = null
 }
 const toolbar = document.getElementById('toolbar')
+const modeSwitch = document.getElementById('mode-switch')
+const toolbarFile = document.getElementById('toolbar-file')
 function isOnToolbar(e) {
   return toolbar.contains(e.target)
+    || modeSwitch.contains(e.target)
+    || toolbarFile.contains(e.target)
+    || document.getElementById('gif-picker').contains(e.target)
 }
 window.addEventListener('mousedown', e => {
   if (currentMode !== 'draw') return
   if (isOnToolbar(e)) return
+  // Ignore clicks outside the draw area
+  const rect = drawArea.getBoundingClientRect()
+  if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) return
   e.preventDefault()
   isDrawing = true
   document.body.classList.add('drawing')
@@ -895,13 +1066,13 @@ function flash(msg) {
 
 const fileDropzone   = document.getElementById('file-dropzone')
 const filePreviewBox = document.getElementById('file-preview-box')
-const filePreviewImg = document.getElementById('file-preview-img')
 const fileInput      = document.getElementById('file-input')
 const durationSlider = document.getElementById('tf-duration')
 const durationVal    = document.getElementById('tf-duration-val')
 const btnSend        = document.getElementById('tf-send')
 
 let pendingFileDataUrl = null
+let pendingFileType    = 'image'
 let fileDurationMs     = 5000
 
 durationSlider.addEventListener('input', () => {
@@ -917,17 +1088,42 @@ function onFileInputChange(e) {
 }
 
 function loadFileAsPreview(file) {
-  if (!file || !file.type.startsWith('image/')) {
-    flash('Seules les images sont supportées')
+  if (!file) return
+  const type = file.type || ''
+  const isImage = type.startsWith('image/')
+  const isVideo = type.startsWith('video/')
+  const isAudio = type.startsWith('audio/')
+  if (!isImage && !isVideo && !isAudio) {
+    flash('Format non supporté')
     return
   }
   const reader = new FileReader()
   reader.onload = () => {
     pendingFileDataUrl = reader.result
-    filePreviewImg.src = pendingFileDataUrl
-    const img = new Image()
-    img.onload = () => placeDefaultPreview(img.naturalWidth, img.naturalHeight)
-    img.src = pendingFileDataUrl
+    pendingFileType    = isVideo ? 'video' : isAudio ? 'audio' : 'image'
+
+    const img = document.getElementById('file-preview-img')
+    const vid = document.getElementById('file-preview-vid')
+    const aud = document.getElementById('file-preview-aud')
+    img.style.display = 'none'; vid.style.display = 'none'; aud.style.display = 'none'
+    img.src = ''; vid.src = ''; aud.src = ''
+
+    if (isImage) {
+      img.src = pendingFileDataUrl
+      img.style.display = 'block'
+      const imgEl = new Image()
+      imgEl.onload = () => placeDefaultPreview(imgEl.naturalWidth, imgEl.naturalHeight)
+      imgEl.src = pendingFileDataUrl
+    } else if (isVideo) {
+      vid.src = pendingFileDataUrl
+      vid.style.display = 'block'
+      vid.onloadedmetadata = () => placeDefaultPreview(vid.videoWidth || 640, vid.videoHeight || 360)
+    } else if (isAudio) {
+      aud.src = pendingFileDataUrl
+      aud.style.display = 'block'
+      placeDefaultPreview(320, 80)
+    }
+
     switchMode('file')
     document.body.classList.add('has-file-preview')
     btnSend.disabled = false
@@ -936,21 +1132,29 @@ function loadFileAsPreview(file) {
 }
 
 function placeDefaultPreview(naturalW, naturalH) {
-  const ratio  = naturalW / naturalH || 1
-  let w = Math.min(areaW * 0.32, 420)
+  const W = window.innerWidth  * 0.8
+  const H = window.innerHeight * 0.8
+  const offX = window.innerWidth  * 0.1
+  const offY = window.innerHeight * 0.1
+  const ratio = naturalW / naturalH || 1
+  let w = Math.min(W * 0.4, 420)
   let h = w / ratio
-  if (h > areaH * 0.6) { h = areaH * 0.6; w = h * ratio }
-  const left = (areaW - w) / 2
-  const top  = (areaH - h) / 2
+  if (h > H * 0.6) { h = H * 0.6; w = h * ratio }
+  const left = offX + (W - w) / 2
+  const top  = offY + (H - h) / 2
   setPreviewRect(left, top, w, h)
 }
 
 function setPreviewRect(left, top, w, h) {
+  const W    = window.innerWidth  * 0.8
+  const H    = window.innerHeight * 0.8
+  const offX = window.innerWidth  * 0.1
+  const offY = window.innerHeight * 0.1
   const minSize = 40
-  w = Math.max(minSize, Math.min(w, areaW))
-  h = Math.max(minSize, Math.min(h, areaH))
-  left = Math.max(0, Math.min(left, areaW - w))
-  top  = Math.max(0, Math.min(top,  areaH - h))
+  w = Math.max(minSize, Math.min(w, W))
+  h = Math.max(minSize, Math.min(h, H))
+  left = Math.max(offX, Math.min(left, offX + W - w))
+  top  = Math.max(offY, Math.min(top,  offY + H - h))
   filePreviewBox.style.left   = left + 'px'
   filePreviewBox.style.top    = top  + 'px'
   filePreviewBox.style.width  = w    + 'px'
@@ -960,7 +1164,13 @@ function setPreviewRect(left, top, w, h) {
 function cancelFilePreview(e) {
   if (e) e.stopPropagation()
   pendingFileDataUrl = null
-  filePreviewImg.src = ''
+  pendingFileType    = 'image'
+  document.getElementById('file-preview-img').src = ''
+  document.getElementById('file-preview-img').style.display = 'none'
+  const vid = document.getElementById('file-preview-vid')
+  vid.src = ''; vid.style.display = 'none'
+  const aud = document.getElementById('file-preview-aud')
+  aud.src = ''; aud.style.display = 'none'
   document.body.classList.remove('has-file-preview')
   btnSend.disabled = true
   checkEmptyState()
@@ -968,13 +1178,17 @@ function cancelFilePreview(e) {
 
 function sendFilePreview() {
   if (!pendingFileDataUrl) return
+  const W    = window.innerWidth  * 0.8
+  const H    = window.innerHeight * 0.8
+  const offX = window.innerWidth  * 0.1
+  const offY = window.innerHeight * 0.1
   const rect = {
-    x: filePreviewBox.offsetLeft / areaW,
-    y: filePreviewBox.offsetTop  / areaH,
-    width:  filePreviewBox.offsetWidth  / areaW,
-    height: filePreviewBox.offsetHeight / areaH
+    x: (filePreviewBox.offsetLeft - offX) / W,
+    y: (filePreviewBox.offsetTop  - offY) / H,
+    width:  filePreviewBox.offsetWidth  / W,
+    height: filePreviewBox.offsetHeight / H
   }
-  ipcRenderer.send('draw-file-send', { ...rect, dataUrl: pendingFileDataUrl, duration: fileDurationMs })
+  ipcRenderer.send('draw-file-send', { ...rect, dataUrl: pendingFileDataUrl, fileType: pendingFileType, duration: fileDurationMs })
   flash(`Envoyé — disparaît dans ${Math.round(fileDurationMs/1000)}s`)
   cancelFilePreview()
 }
@@ -1029,7 +1243,7 @@ window.addEventListener('paste', e => {
   const items = e.clipboardData && e.clipboardData.items
   if (!items) return
   for (const item of items) {
-    if (item.type.startsWith('image/')) {
+    if (item.type.startsWith('image/') || item.type.startsWith('video/')) {
       const f = item.getAsFile()
       if (f) loadFileAsPreview(f)
       break
@@ -1048,6 +1262,349 @@ document.addEventListener('keydown', e => {
   const km={p:'pen',l:'line',r:'rect',c:'circle',a:'arrow',e:'eraser'}
   if (km[e.key]) setTool(km[e.key])
 })
+
+const KLIPY_KEY = 'bDj5kMZ2LkkufULwlyhdgopioMtGYvHOpShzDMj8shtMQBziCWekPXi0XkJCfZwX'
+const KLIPY_BASE = 'https://api.klipy.com/api/v1'
+
+let gifTab         = 'search'
+let gifRenderToken = 0
+let gifSearchTimer = null
+let gifNextPos     = ''
+let gifCurrentQ    = ''
+
+function setGifTab(t) {
+  gifTab = t
+  document.querySelectorAll('.gif-tab').forEach(b => b.classList.remove('active'))
+  document.getElementById('gif-tab-' + t).classList.add('active')
+  document.getElementById('gif-search-input').value = ''
+  gifNextPos = ''
+  gifCurrentQ = ''
+
+  const grid      = document.getElementById('gif-grid')
+  const urlPanel  = document.getElementById('gif-url-panel')
+  const searchBar = document.querySelector('#gif-header > div:nth-child(2)')
+
+  if (t === 'url') {
+    grid.style.display     = 'none'
+    urlPanel.style.display = 'flex'
+    searchBar.style.display = 'none'
+    document.getElementById('gif-url-input').value = ''
+    document.getElementById('gif-url-preview').style.display = 'none'
+    document.getElementById('gif-url-error').style.display   = 'none'
+    setTimeout(() => document.getElementById('gif-url-input').focus(), 80)
+  } else {
+    grid.style.display     = 'grid'
+    urlPanel.style.display = 'none'
+    searchBar.style.display = ''
+    if (t === 'emoji') loadEmojiGrid()
+    else loadTrending()
+  }
+}
+
+function sendGifFromInputUrl() {
+  const input = document.getElementById('gif-url-input')
+  const url   = input.value.trim()
+  const errEl = document.getElementById('gif-url-error')
+  const prevBox = document.getElementById('gif-url-preview')
+  const prevImg = document.getElementById('gif-url-preview-img')
+
+  errEl.style.display    = 'none'
+  prevBox.style.display  = 'none'
+
+  if (!url) { errEl.textContent = 'Entre un lien.'; errEl.style.display = 'block'; return }
+
+  // Affiche un aperçu d'abord
+  prevImg.src = url
+  prevImg.onload = () => {
+    prevBox.style.display = 'block'
+    flash('Aperçu OK — chargement…')
+    sendGifFromUrl(url, 'GIF via URL')
+  }
+  prevImg.onerror = () => {
+    errEl.textContent = 'Impossible de charger ce lien. Vérifie qu\'il pointe directement vers un GIF/image.'
+    errEl.style.display = 'block'
+    flash('❌ Lien invalide')
+  }
+}
+
+function openGifPicker() {
+  gifTab = 'search'
+  document.querySelectorAll('.gif-tab').forEach(b => b.classList.remove('active'))
+  document.getElementById('gif-tab-search').classList.add('active')
+  document.getElementById('gif-search-input').value = ''
+  document.getElementById('gif-grid').style.display     = 'grid'
+  document.getElementById('gif-url-panel').style.display = 'none'
+  document.querySelector('#gif-header > div:nth-child(2)').style.display = ''
+  setTimeout(() => document.getElementById('gif-search-input').focus(), 80)
+  gifNextPos = ''
+  gifCurrentQ = ''
+  loadTrending()
+}
+
+// Klipy endpoints:
+// Trending GIF : GET /api/v1/{KEY}/gifs/trending?locale=fr_FR&limit=20&page=0
+// Search GIF   : GET /api/v1/{KEY}/gifs/search?search=cats&locale=fr_FR&limit=20&page=0
+// Trending Sticker : /stickers/trending  |  Search Sticker: /stickers/search
+
+async function klipyFetch(path, params = {}) {
+  const url = new URL(`${KLIPY_BASE}/${KLIPY_KEY}${path}`)
+  //url.searchParams.set('locale', 'fr_FR')
+  url.searchParams.set('limit', '20')
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== '' && v !== undefined) url.searchParams.set(k, v)
+  }
+  console.log('[GIF] fetch:', url.toString())
+  const r = await fetch(url)
+  const json = await r.json()
+  console.log('[GIF] response status:', r.status, '| keys:', Object.keys(json))
+  // Log first item structure if array found
+  const arr = json.data || json.results || json.gifs || json.items || (Array.isArray(json) ? json : null)
+  if (arr && arr[0]) console.log('[GIF] first item keys:', Object.keys(arr[0]), '| media keys:', arr[0].media ? Object.keys(arr[0].media) : 'no media')
+  if (!r.ok) throw new Error(`Klipy HTTP ${r.status}: ${JSON.stringify(json)}`)
+  return json
+}
+
+// Parse Klipy response: { result: true, data: { data: [...] } }
+// Each item: { id, slug, title, file: { hd: { gif: { url } }, sd: { gif: { url } } } }
+function parseKlipyResults(data) {
+  const arr = data?.data?.data || data?.data || (Array.isArray(data) ? data : null)
+  if (!arr || !Array.isArray(arr)) {
+    console.warn('[GIF] parseKlipyResults: no array found in response:', JSON.stringify(data).slice(0, 200))
+    return []
+  }
+  return arr.map(item => {
+    const file = item.file || {}
+    // Klipy format: file.hd.gif.url / file.sd.gif.url / file.hd.webp.url
+    const fullUrl    = file.hd?.gif?.url || file.sd?.gif?.url || ''
+    const previewUrl = file.sd?.webp?.url || file.sd?.gif?.url || file.hd?.webp?.url || fullUrl
+    const title = item.title || item.slug || ''
+    return { url: fullUrl, preview: previewUrl, title }
+  }).filter(x => x.url)
+}
+
+function renderGifGrid(items, append = false) {
+  const grid = document.getElementById('gif-grid')
+  if (!append) {
+    grid.innerHTML = ''
+    grid.style.gridTemplateColumns = 'repeat(2, 1fr)'
+  }
+  if (!items || items.length === 0) {
+    if (!append) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--dim);font-size:12px;">Aucun résultat</div>'
+    return
+  }
+  for (const item of items) {
+    const el = document.createElement('div')
+    el.className = 'gif-item'
+    el.innerHTML = `<div class="gif-placeholder" style="width:100%;height:100%;min-height:80px;background:var(--surface2);border-radius:8px;"></div>
+      <div class="gif-item-label">${item.title}</div>`
+    el.addEventListener('click', () => sendGifFromUrl(item.url, item.title))
+    grid.appendChild(el)
+    const img = document.createElement('img')
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:8px;display:block;pointer-events:none;'
+    img.onload = () => {
+      const placeholder = el.querySelector('.gif-placeholder')
+      if (placeholder) placeholder.replaceWith(img)
+    }
+    img.src = (item.preview || item.url) + '?_t=' + Date.now()
+  }
+}
+
+async function loadTrending() {
+  const grid = document.getElementById('gif-grid')
+  grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--dim);font-size:12px;">Chargement…</div>'
+
+  if (KLIPY_KEY === 'VOTRE_CLE_KLIPY_ICI') {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--dim);font-size:11px;line-height:1.7;">
+      🔑 <strong style="color:var(--accent2)">Clé API manquante</strong><br>
+      Inscris-toi gratuitement sur <a href="#" style="color:var(--accent2)">partner.klipy.com</a><br>
+      puis remplace <code style="color:var(--accent2)">VOTRE_CLE_KLIPY_ICI</code><br>
+      dans le fichier <code>draw-overlay.html</code>
+    </div>`
+    return
+  }
+
+  try {
+    const path = gifTab === 'sticker' ? '/stickers/trending' : '/gifs/trending'
+    const data = await klipyFetch(path, { page: 0 })
+    console.log('[GIF] loadTrending raw response:', JSON.stringify(data).slice(0, 500))
+    gifNextPos  = '1'
+    gifCurrentQ = ''
+    const parsed = parseKlipyResults(data)
+    console.log('[GIF] parsed items count:', parsed.length, '| first:', parsed[0])
+    renderGifGrid(parsed)
+  } catch (err) {
+    console.error('[GIF] loadTrending error:', err)
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--dim);font-size:12px;">Erreur réseau : ${err.message}</div>`
+  }
+}
+
+async function searchGifs(q, append = false) {
+  const grid = document.getElementById('gif-grid')
+  if (!append) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--dim);font-size:12px;">Recherche…</div>'
+  }
+  try {
+    const path = gifTab === 'sticker' ? '/stickers/search' : '/gifs/search'
+    const page = append ? parseInt(gifNextPos || '0') : 0
+    const data = await klipyFetch(path, { q, page })
+    gifNextPos  = String(page + 1)
+    gifCurrentQ = q
+    renderGifGrid(parseKlipyResults(data), append)
+  } catch (err) {
+    if (!append) grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--dim);font-size:12px;">Erreur : ${err.message}</div>`
+  }
+}
+
+function onGifSearch(val) {
+  clearTimeout(gifSearchTimer)
+  if (!val.trim()) { gifCurrentQ = ''; loadTrending(); return }
+  gifSearchTimer = setTimeout(() => searchGifs(val.trim()), 350)
+}
+
+// Infinite scroll
+document.getElementById('gif-grid').addEventListener('scroll', function() {
+  if (this.scrollHeight - this.scrollTop - this.clientHeight < 80 && gifNextPos) {
+    if (gifCurrentQ) searchGifs(gifCurrentQ, true)
+    else if (KLIPY_KEY !== 'VOTRE_CLE_KLIPY_ICI') loadTrending()
+  }
+})
+
+function loadEmojiGrid() {
+  const EMOJIS = ['😂','🤣','😭','😍','🥺','😊','🙏','💀','❤️','🔥','✨','😎','🤔','😅','🥹','😢','😤','🤯','🫡','🫶','💪','👀','🫠','😴','🤩','😈','👍','💩','🎉','🙈','🤡','💅','🫣','🦋','🐸','🎊','😏','🥰','😜','😩']
+  const grid = document.getElementById('gif-grid')
+  grid.innerHTML = ''
+  grid.style.gridTemplateColumns = 'repeat(5, 1fr)'
+  for (const e of EMOJIS) {
+    const el = document.createElement('div')
+    el.style.cssText = 'font-size:28px;display:flex;align-items:center;justify-content:center;aspect-ratio:1/1;cursor:pointer;border-radius:8px;transition:background .1s;'
+    el.textContent = e
+    el.addEventListener('mouseenter', () => el.style.background = 'var(--surface2)')
+    el.addEventListener('mouseleave', () => el.style.background = 'transparent')
+    el.addEventListener('click', () => { flash('Émoji : ' + e); switchMode('draw') })
+    grid.appendChild(el)
+  }
+}
+
+function detectMediaType(url) {
+  // Retire les query params pour analyser l'extension
+  const clean = url.split('?')[0].toLowerCase()
+  if (clean.endsWith('.mp4') || clean.endsWith('.webm') || clean.endsWith('.mov')) return 'video'
+  if (clean.endsWith('.mp3') || clean.endsWith('.ogg') || clean.endsWith('.wav')) return 'audio'
+  return 'image' // gif, png, jpg, webp, etc.
+}
+
+// Résout les liens Discord "images-ext" qui wrappent une URL externe
+function resolveDiscordExternalUrl(url) {
+  // https://images-ext-1.discordapp.net/external/HASH/https/media.tenor.com/...
+  const extMatch = url.match(/images-ext-\d+\.discordapp\.net\/external\/[^/]+\/https?\/(.+)/)
+  if (extMatch) return 'https://' + extMatch[1]
+  return url
+}
+
+function sendGifFromUrl(url, title) {
+  if (!url) return
+  url = resolveDiscordExternalUrl(url)
+  const mediaType = detectMediaType(url)
+  flash('Chargement…')
+
+  fetch(url)
+    .then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`)
+      return r.blob()
+    })
+    .then(blob => {
+      // Force le bon mime type pour les mp4 si le serveur renvoie octet-stream
+      const mime = blob.type && blob.type !== 'application/octet-stream'
+        ? blob.type
+        : (mediaType === 'video' ? 'video/mp4' : 'image/gif')
+      const fixedBlob = new Blob([blob], { type: mime })
+      const reader = new FileReader()
+      reader.onload = () => {
+        pendingFileDataUrl = reader.result
+        pendingFileType    = mediaType
+        const img = document.getElementById('file-preview-img')
+        const vid = document.getElementById('file-preview-vid')
+        const aud = document.getElementById('file-preview-aud')
+        img.style.display = 'none'; vid.style.display = 'none'; aud.style.display = 'none'
+
+        if (mediaType === 'video') {
+          vid.src = pendingFileDataUrl
+          vid.style.display = 'block'
+          vid.onloadedmetadata = () => placeDefaultPreview(vid.videoWidth || 480, vid.videoHeight || 270)
+          vid.load()
+          placeDefaultPreview(480, 270)
+        } else if (mediaType === 'audio') {
+          aud.src = pendingFileDataUrl
+          aud.style.display = 'block'
+          placeDefaultPreview(400, 80)
+        } else {
+          img.src = pendingFileDataUrl
+          img.style.display = 'block'
+          placeDefaultPreview(480, 270)
+        }
+
+        switchMode('file')
+        document.body.classList.add('has-file-preview')
+        document.getElementById('tf-send').disabled = false
+        flash(`Média sélectionné${title ? ' : ' + title : ''}`)
+      }
+      reader.readAsDataURL(fixedBlob)
+    })
+    .catch(err => {
+      console.error('[URL] fetch error:', err)
+      flash('❌ Impossible de charger ce lien')
+    })
+}
+
+function sendGifFromInputUrl() {
+  const input  = document.getElementById('gif-url-input')
+  const errEl  = document.getElementById('gif-url-error')
+  const prevBox = document.getElementById('gif-url-preview')
+  const prevImg = document.getElementById('gif-url-preview-img')
+  let url = input.value.trim()
+
+  errEl.style.display   = 'none'
+  prevBox.style.display = 'none'
+
+  if (!url) { errEl.textContent = 'Entre un lien.'; errEl.style.display = 'block'; return }
+
+  url = resolveDiscordExternalUrl(url)
+  const mediaType = detectMediaType(url)
+
+  if (mediaType === 'video') {
+    // Pour les vidéos, on affiche un aperçu vidéo
+    prevImg.style.display = 'none'
+    let previewVid = document.getElementById('gif-url-preview-vid')
+    if (!previewVid) {
+      previewVid = document.createElement('video')
+      previewVid.id = 'gif-url-preview-vid'
+      previewVid.autoplay = true; previewVid.loop = true; previewVid.muted = true; previewVid.playsInline = true
+      previewVid.style.cssText = 'width:100%;display:block;max-height:180px;object-fit:contain;background:var(--surface2);border-radius:8px;'
+      prevBox.appendChild(previewVid)
+    }
+    previewVid.src = url
+    previewVid.style.display = 'block'
+    prevBox.style.display = 'block'
+    flash('Aperçu vidéo — chargement…')
+    sendGifFromUrl(input.value.trim(), 'Vidéo via URL')
+  } else {
+    // Image / GIF — aperçu classique
+    let previewVid = document.getElementById('gif-url-preview-vid')
+    if (previewVid) previewVid.style.display = 'none'
+    prevImg.style.display = 'block'
+    prevImg.src = url
+    prevImg.onload = () => {
+      prevBox.style.display = 'block'
+      flash('Aperçu OK — chargement…')
+      sendGifFromUrl(input.value.trim(), 'GIF via URL')
+    }
+    prevImg.onerror = () => {
+      errEl.textContent = 'Impossible de charger ce lien.'
+      errEl.style.display = 'block'
+      flash('❌ Lien invalide')
+    }
+  }
+}
 
 ipcRenderer.on('draw-remote-stroke',     (_,d)=>applyRemote(d))
 ipcRenderer.on('draw-remote-cursor',     (_,{peerId,username,x,y})=>updateRemoteCursor(peerId,username,x,y))
