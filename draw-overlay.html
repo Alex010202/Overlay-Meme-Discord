@@ -930,6 +930,18 @@ function isOnToolbar(e) {
     || toolbarFile.contains(e.target)
     || document.getElementById('gif-picker').contains(e.target)
 }
+
+
+function flushStrokeBuffer() {
+  if (strokeBuffer.length === 0) return
+  ipcRenderer.send('draw-sync-batch', [...strokeBuffer])
+  strokeBuffer = []
+  strokeFlushTimer = null
+}
+
+let strokeBuffer = []
+let strokeFlushTimer = null
+
 window.addEventListener('mousedown', e => {
   if (currentMode !== 'draw') return
   if (isOnToolbar(e)) return
@@ -960,16 +972,18 @@ window.addEventListener('mousemove', e => {
   if (!isDrawing) return
   if (currentTool === 'pen') {
     drawLine(ctx, lastX, lastY, p.x, p.y, getColor(), brushSize)
-    ipcRenderer.send('draw-sync', {
+    strokeBuffer.push({
       type:'pen',
       x0:lastX/CANVAS_W, y0:lastY/CANVAS_H,
       x1:p.x/CANVAS_W,   y1:p.y/CANVAS_H,
       color:currentColor, size:brushSize, opacity:brushOpacity
     })
+    if (!strokeFlushTimer) strokeFlushTimer = setTimeout(flushStrokeBuffer, 16)
     lastX = p.x; lastY = p.y
   } else if (currentTool === 'eraser') {
     eraseAt(ctx, p.x, p.y, brushSize * 2)
-    ipcRenderer.send('draw-sync', { type:'eraser', x:p.x/CANVAS_W, y:p.y/CANVAS_H, size:brushSize*2 })
+    strokeBuffer.push({ type:'eraser', x:p.x/CANVAS_W, y:p.y/CANVAS_H, size:brushSize*2 })
+    if (!strokeFlushTimer) strokeFlushTimer = setTimeout(flushStrokeBuffer, 16)
     lastX = p.x; lastY = p.y
   } else {
     ctx.clearRect(0, 0, CANVAS_W, CANVAS_H)

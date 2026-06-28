@@ -124,7 +124,7 @@ function handleClientEvent(ws, event, data) {
       const { code } = data
       broadcastToRoom(code, pack('draw-stroke', data), ws)
       break
-    }
+    }   
     case 'draw-cursor-move': {
       const { code, x, y } = data
       const now = Date.now()

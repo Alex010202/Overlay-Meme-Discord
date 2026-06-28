@@ -433,11 +433,20 @@ function setupIpc() {
   ipcMain.on('draw-get-status', (e) => {
     e.reply('draw-status', { enabled: drawEnabled, code: drawCode, shareScreen })
   })
+  ipcMain.on('draw-sync-batch', (e, strokes) => {
+  const { sendDrawEvent } = require('./bot')
+  for (const stroke of strokes) {
+    sendDrawEvent('draw-stroke', { ...stroke, code: peerDrawCode })
+  }
+})
+
   ipcMain.on('capture-frame', (e, dataUrl) => {
     if (!shareScreen || !drawEnabled || !drawCode) return
     getDrawOverlayWindow()?.webContents.send('draw-screen-preview', dataUrl)
     sendDrawEvent('draw-screen', { dataUrl, code: drawCode })
   })
+
+  
   ipcMain.on('capture-hide-overlay',  () => hideOverlayForCapture())
   ipcMain.on('capture-show-overlay',  () => showOverlayAfterCapture())
   ipcMain.on('draw-join', (e, { code, username }) => {
