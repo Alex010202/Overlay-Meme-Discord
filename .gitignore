@@ -5,4 +5,4 @@ start
 token.env
 *.env
 dist/
-start.bat
+*.bat
