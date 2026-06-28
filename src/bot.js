@@ -61,6 +61,13 @@ async function onServerEvent(event, data) {
     }
     return
   }
+
+  if (event === 'draw-screen-resize') {
+  const { getDrawOverlayWindow } = require('./windows')
+  getDrawOverlayWindow()?.webContents.send('draw-host-screen-size', { ...data, isPeer: true })
+  return
+}
+
   if (event === 'draw-closed') {
     require('./ipc').setPeerDrawCode(null)
     const { getDrawOverlayWindow, getSettingsWindow, hideDrawOverlay, hideHostDrawOverlay, getHostDrawOverlay } = require('./windows')

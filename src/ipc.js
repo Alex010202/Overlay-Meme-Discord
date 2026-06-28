@@ -238,6 +238,8 @@ function setupIpc() {
       overlay.setIgnoreMouseEvents(true, { forward: true })
     }
   })
+
+  
   ipcMain.on('win-minimize', () => getSettingsWindow()?.minimize())
   ipcMain.on('win-close',    () => getSettingsWindow()?.close())
   ipcMain.on('get-profiles', (e) => e.reply('load-profiles', loadProfiles()))
@@ -398,6 +400,7 @@ function setupIpc() {
       getDrawOverlayWindow()?.webContents.send('draw-share-info', { resolution: res, fps })
     }
   })
+  
   ipcMain.on('draw-sync', (e, data) => {
     const activeCode = getActiveDrawCode()
     if (!activeCode) return
@@ -443,5 +446,30 @@ function setupIpc() {
   ipcMain.on('draw-join', (e, { code, username }) => {
     sendDrawEvent('draw-join', { code, username })
   })
+
+
+  screen.on('display-metrics-changed', () => {
+  const display = screen.getPrimaryDisplay()
+  const { width, height } = display.bounds
+  sendDrawEvent('draw-screen-resize', { width, height })
+})
+
+ipcMain.on('draw-cursor-hide', () => {
+  const win = getDrawOverlayWindow()
+  if (win && !win.isDestroyed()) {
+    win.webContents.executeJavaScript(
+      `document.documentElement.style.setProperty('cursor', 'none', 'important')`
+    ).catch(() => {})
+  }
+})
+ipcMain.on('draw-cursor-show', () => {
+  const win = getDrawOverlayWindow()
+  if (win && !win.isDestroyed()) {
+    win.webContents.executeJavaScript(
+      `document.documentElement.style.removeProperty('cursor')`
+    ).catch(() => {})
+  }
+})
+  
 }
 module.exports = { setupIpc, getOverlayNormalBounds: () => overlayNormalBounds, setPeerDrawCode, restartScreenCapture }

@@ -26,6 +26,7 @@ const ctx    = canvas.getContext('2d')
 
 canvas.width  = window.innerWidth
 canvas.height = window.innerHeight
+console.log(`[HOST INIT] canvas=${canvas.width}x${canvas.height} devicePixelRatio=${window.devicePixelRatio}`)
 
 window.addEventListener('resize', () => {
   const snapshot = canvas.toDataURL()
@@ -37,13 +38,18 @@ window.addEventListener('resize', () => {
 })
 
 function drawLine(x0, y0, x1, y1, color, size) {
+  const dist = Math.sqrt((x1-x0)**2 + (y1-y0)**2)
+  const steps = Math.max(1, Math.ceil(dist / (size * 0.5)))
   ctx.beginPath()
   ctx.strokeStyle = color
   ctx.lineWidth   = size
   ctx.lineCap     = 'round'
   ctx.lineJoin    = 'round'
   ctx.moveTo(x0, y0)
-  ctx.lineTo(x1, y1)
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps
+    ctx.lineTo(x0 + (x1-x0)*t, y0 + (y1-y0)*t)
+  }
   ctx.stroke()
 }
 
@@ -75,6 +81,11 @@ function drawShape(tool, x0, y0, x1, y1, color, size) {
     ctx.moveTo(x1, y1)
     ctx.lineTo(x1 - headLen * Math.cos(angle + Math.PI / 6), y1 - headLen * Math.sin(angle + Math.PI / 6))
     ctx.stroke()
+  } else if (tool === 'circle') {
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2
+  const rx = Math.abs(x1 - x0) / 2, ry = Math.abs(y1 - y0) / 2
+  ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2)
+  ctx.stroke()
   }
 }
 
@@ -147,15 +158,15 @@ function floodFillHost(startX, startY, hex, opacity) {
   ctx.putImageData(imgData, 0, 0)
 }
 
-// Le peer dessine dans une draw-area à top:10% left:10% width:80% height:80%
-// Les coords 0→1 sont relatives à cette zone — on remet dans ce même espace ici
+// Remape les coords normalisées du peer [0→1] (où 0=bord gauche draw-area, 1=bord droit)
+// sur le plein écran host.
+// La draw-area peer occupe left:10% top:10% width:80% height:80% de son écran.
+const PEER_LEFT = 0.1, PEER_TOP = 0.1, PEER_W = 0.8, PEER_H = 0.8
+
 function toHostPx(nx, ny) {
-  const W = canvas.width
-  const H = canvas.height
-  return {
-    x: (W * 0.1) + nx * (W * 0.8),
-    y: (H * 0.1) + ny * (H * 0.8)
-  }
+  const x = nx * canvas.width
+  const y = ny * canvas.height
+  return { x, y }
 }
 
 function applyStroke(data) {
@@ -166,7 +177,8 @@ function applyStroke(data) {
   const g = parseInt(hex.slice(3, 5), 16)
   const b = parseInt(hex.slice(5, 7), 16)
   const color = `rgba(${r},${g},${b},${data.opacity || 0.9})`
-  const size  = data.size || 6
+  const hostScale = data.peerCanvasW ? (canvas.width / data.peerCanvasW) : 1
+  const size = (data.size || 6) * hostScale
 
   if (data.type === 'pen') {
     const p0 = toHostPx(data.x0, data.y0), p1 = toHostPx(data.x1, data.y1)
@@ -174,7 +186,7 @@ function applyStroke(data) {
   } else if (data.type === 'eraser') {
     const p = toHostPx(data.x, data.y)
     eraseAt(p.x, p.y, data.size)
-  } else if (data.type === 'line' || data.type === 'rect' || data.type === 'arrow') {
+} else if (data.type === 'line' || data.type === 'rect' || data.type === 'arrow' || data.type === 'circle') {
     const p0 = toHostPx(data.x0, data.y0), p1 = toHostPx(data.x1, data.y1)
     drawShape(data.type, p0.x, p0.y, p1.x, p1.y, color, size)
   } else if (data.type === 'fill') {
@@ -187,7 +199,7 @@ function applyStroke(data) {
       const img = new Image()
       img.onload = () => {
         ctx.clearRect(0, 0, W, H)
-        ctx.drawImage(img, W * 0.1, H * 0.1, W * 0.8, H * 0.8)
+        ctx.drawImage(img, 0, 0, W, H)
       }
       img.src = data.dataUrl
     } else {

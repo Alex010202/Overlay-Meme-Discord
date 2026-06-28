@@ -64,6 +64,7 @@ function createOverlayWindow() {
 
   const ses = overlayWindow.webContents.session
 
+  
   ses.webRequest.onBeforeSendHeaders(
     { urls: ['*://*.tiktok.com/*', '*://*.tiktokcdn.com/*', '*://*.tiktokv.com/*'] },
     (details, callback) => {
@@ -112,7 +113,9 @@ function createDrawOverlayWindow(hostWidth, hostHeight) {
     }
   })
 
-  drawOverlayWindow.loadFile('draw-overlay.html')
+drawOverlayWindow.loadFile('draw-overlay.html')
+drawOverlayWindow.webContents.openDevTools({ mode: 'detach' })
+
   drawOverlayWindow.hide()
 
   drawOverlayWindow.on('closed', () => {
@@ -178,6 +181,7 @@ function createHostDrawOverlay() {
 
   // Force les bounds après loadFile — Electron/Windows peut reclipper
   // la fenêtre à workArea pendant le chargement
+
   hostDrawOverlay.webContents.once('did-finish-load', () => {
     const b2 = screen.getPrimaryDisplay().bounds
     hostDrawOverlay.setBounds({ x: b2.x, y: b2.y, width: b2.width, height: b2.height })
