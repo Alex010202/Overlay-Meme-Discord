@@ -114,7 +114,7 @@ function createDrawOverlayWindow(hostWidth, hostHeight) {
   })
 
 drawOverlayWindow.loadFile('draw-overlay.html')
-drawOverlayWindow.webContents.openDevTools({ mode: 'detach' })
+//drawOverlayWindow.webContents.openDevTools({ mode: 'detach' })
 
   drawOverlayWindow.hide()
 
