@@ -130,7 +130,6 @@ function floodFillHost(startX, startY, hex, opacity) {
     }
     stack.push([x+1,y],[x-1,y],[x,y+1],[x,y-1])
   }
-  // Pass 2 : smooth bords antialiasés
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const vi = y * W + x
@@ -158,9 +157,6 @@ function floodFillHost(startX, startY, hex, opacity) {
   ctx.putImageData(imgData, 0, 0)
 }
 
-// Remape les coords normalisées du peer [0→1] (où 0=bord gauche draw-area, 1=bord droit)
-// sur le plein écran host.
-// La draw-area peer occupe left:10% top:10% width:80% height:80% de son écran.
 const PEER_LEFT = 0.1, PEER_TOP = 0.1, PEER_W = 0.8, PEER_H = 0.8
 
 function toHostPx(nx, ny) {

@@ -90,8 +90,6 @@ function createDrawOverlayWindow(hostWidth, hostHeight) {
     return drawOverlayWindow
   }
 
-  // Toujours utiliser la taille physique totale de l'écran (taskbar incluse)
-  // pour que le canvas couvre exactement les mêmes pixels que l'écran de l'hôte.
   const { width: sw, height: sh } = screen.getPrimaryDisplay().size
 
   drawOverlayWindow = new BrowserWindow({
@@ -114,7 +112,6 @@ function createDrawOverlayWindow(hostWidth, hostHeight) {
   })
 
 drawOverlayWindow.loadFile('draw-overlay.html')
-//drawOverlayWindow.webContents.openDevTools({ mode: 'detach' })
 
   drawOverlayWindow.hide()
 
@@ -128,7 +125,6 @@ drawOverlayWindow.loadFile('draw-overlay.html')
 
 function resizeDrawWindow(hostWidth, hostHeight) {
   if (!drawOverlayWindow || drawOverlayWindow.isDestroyed()) return
-  // On reste toujours en plein écran physique — le HTML gère le scaling interne
   const { width: sw, height: sh } = screen.getPrimaryDisplay().size
   drawOverlayWindow.setBounds({ x: 0, y: 0, width: sw, height: sh }, true)
 }
@@ -176,11 +172,7 @@ function createHostDrawOverlay() {
 
   hostDrawOverlay.setAlwaysOnTop(true, 'pop-up-menu')
   hostDrawOverlay.setIgnoreMouseEvents(true, { forward: true })
-  //hostDrawOverlay.setContentProtection(true)
   hostDrawOverlay.loadFile('host-draw-overlay.html')
-
-  // Force les bounds après loadFile — Electron/Windows peut reclipper
-  // la fenêtre à workArea pendant le chargement
 
   hostDrawOverlay.webContents.once('did-finish-load', () => {
     const b2 = screen.getPrimaryDisplay().bounds
@@ -207,8 +199,6 @@ function showHostDrawOverlay() {
   hostDrawOverlay.setIgnoreMouseEvents(true, { forward: true })
   hostDrawOverlay.setAlwaysOnTop(true, 'pop-up-menu')
   hostDrawOverlay.show()
-  // setBounds après show() force la fenêtre à couvrir toute la résolution
-  // taskbar incluse — Windows bloque ça à la création mais pas après show()
   const b = screen.getPrimaryDisplay().bounds
   hostDrawOverlay.setBounds({ x: b.x, y: b.y, width: b.width, height: b.height })
 }
@@ -444,7 +434,7 @@ function resizeYtView(bounds) {
 
 function destroyYtView() {
   if (!ytView || !overlayWindow) return
-    clearInterval(endCheckInterval)  // ← ajoute ça
+    clearInterval(endCheckInterval)
     endCheckInterval = null
   try { overlayWindow.removeBrowserView(ytView) } catch (err) {
     console.error('Erreur suppression BrowserView:', err.message)

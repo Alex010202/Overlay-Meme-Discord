@@ -25,7 +25,6 @@
     html, body { height: 100%; overflow: hidden; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; }
 
-    /* ── Titlebar ── */
     .titlebar {
       height: 46px;
       background: var(--surface);
@@ -65,7 +64,6 @@
     .win-btn:hover { background: var(--raised); color: var(--text); }
     .win-btn.close:hover { background: var(--red); color: white; }
 
-    /* ── Layout ── */
     .layout { display: flex; flex: 1; overflow: hidden; }
 
     .sidebar {
@@ -96,7 +94,6 @@
     .tab { display: none; }
     .tab.active { display: flex; flex-direction: column; gap: 8px; }
 
-    /* ── Cards ── */
     .card {
       background: var(--surface);
       border: 1px solid var(--border-subtle);
@@ -112,7 +109,6 @@
     }
     .card-body { padding: 0; }
 
-    /* ── Rows ── */
     .row {
       display: flex; align-items: center; justify-content: space-between;
       padding: 12px 16px; gap: 16px;
@@ -126,7 +122,6 @@
     .row-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
     .row-left { flex: 1; min-width: 0; }
 
-    /* ── Inputs ── */
     .field-group { display: flex; gap: 7px; }
     input[type="text"] {
       flex: 1; background: var(--raised);
@@ -149,7 +144,6 @@
     select:focus { border-color: var(--accent); }
     select option { background: var(--raised); }
 
-    /* ── Slider ── */
     .slider-wrap { display: flex; align-items: center; gap: 10px; }
     input[type="range"] {
       flex: 1; accent-color: var(--accent);
@@ -157,7 +151,6 @@
     }
     .slider-val { font-size: 12px; font-weight: 600; color: var(--accent); min-width: 38px; text-align: right; background: var(--accent-dim); border-radius: 5px; padding: 2px 6px; }
 
-    /* ── Toggle ── */
     .toggle { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
     .toggle input { opacity: 0; width: 0; height: 0; }
     .toggle-track {
@@ -173,7 +166,6 @@
     }
     .toggle input:checked + .toggle-track::after { transform: translateX(16px); }
 
-    /* ── Buttons ── */
     .btn {
       background: var(--accent); color: white; border: none;
       border-radius: 7px; padding: 8px 15px;
@@ -189,7 +181,6 @@
     .btn.warning { background: var(--orange); }
     .btn.full { width: 100%; }
 
-    /* ── Hotkey ── */
     .hotkey-box {
       display: flex; align-items: center; justify-content: space-between;
       background: var(--raised); border: 1px solid var(--border);
@@ -204,7 +195,6 @@
     }
     .hotkey-clear:hover { background: var(--border); color: var(--text); }
 
-    /* ── Chip buttons ── */
     .chip-group { display: flex; gap: 5px; flex-wrap: wrap; }
     .chip {
       background: var(--raised); border: 1px solid var(--border);
@@ -215,29 +205,24 @@
     .chip:hover { background: var(--border); color: var(--text); }
     .chip.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
 
-    /* ── Color ── */
     .color-row { display: flex; align-items: center; gap: 10px; }
     input[type="color"] {
       width: 32px; height: 32px; border: 1px solid var(--border);
       border-radius: 7px; cursor: pointer; background: none; padding: 2px;
     }
 
-    /* ── Collapsible ── */
     .collapsible { overflow: hidden; max-height: 0; opacity: 0; transition: max-height 0.25s ease, opacity 0.2s ease; }
     .collapsible.open { max-height: 80px; opacity: 1; }
-    /* Share settings */
     .share-settings { overflow: hidden; max-height: 0; transition: max-height 0.25s ease; }
     .share-settings.open { max-height: 120px; }
     .share-settings-inner { margin: 0 14px 12px; background: var(--bg); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; }
     .share-settings-row { display: flex; align-items: center; gap: 10px; }
     .share-settings-label { font-size: 11px; font-weight: 600; color: var(--text-muted); min-width: 40px; }
 
-    /* ── Feedback ── */
     .flash { font-size: 11px; color: var(--green); opacity: 0; transition: opacity 0.2s; min-height: 14px; margin-top: 5px; }
     .flash.show { opacity: 1; }
     .hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; line-height: 1.5; }
 
-    /* ── Profiles ── */
     .profile-item {
       display: flex; align-items: center; gap: 8px;
       padding: 9px 14px; border-bottom: 1px solid var(--border-subtle);
@@ -247,7 +232,6 @@
     .profile-meta { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
     .empty-profiles { padding: 24px; text-align: center; font-size: 12px; color: var(--text-muted); }
 
-    /* ── Version badge ── */
     #version-badge {
       position: fixed; bottom: 10px; right: 12px;
       display: flex; align-items: center; gap: 5px;
@@ -266,7 +250,6 @@
     #version-badge.checking .vb-dot { animation: pulse 1s ease-in-out infinite; }
     @keyframes pulse { 0%,100% { opacity: 0.3; } 50% { opacity: 1; } }
 
-    /* ── Sidebar sub items ── */
     .nav.sub {
       display: flex; align-items: center; gap: 8px;
       padding: 7px 10px 7px 14px; border-radius: 7px;
@@ -277,7 +260,6 @@
     .nav.sub:hover  { background: var(--raised); color: var(--text-secondary); }
     .nav.sub.active { background: var(--accent-dim); color: var(--accent); }
 
-    /* ── Draw session ── */
     .draw-disabled { opacity: 0.4; pointer-events: none; }
 
     .draw-status-banner {
@@ -350,7 +332,6 @@
       text-transform: none; letter-spacing: normal; font-weight: 500;
     }
 
-    /* ── Thème ── */
     .theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
     .theme-card {
       border: 1px solid var(--border);
@@ -1260,7 +1241,6 @@
     function minimizeWindow() { ipcRenderer.send('win-minimize') }
     function closeWindow()    { ipcRenderer.send('win-close') }
 
-    // ── Mode / tab switching ────────────────────────────────────────
     let currentMode = 'overlay'
 
     function switchMode(mode, el) {
@@ -1276,7 +1256,6 @@
         overlayGroup.style.display = ''
         dessinGroup.style.display  = 'none'
         label.textContent          = 'Overlay Discord'
-        // Show first overlay tab
         const firstNav = overlayGroup.querySelector('.nav.sub')
         showTab('general', firstNav)
       } else {
@@ -1688,7 +1667,6 @@
       const noFullscreen = document.getElementById('yt-no-fullscreen').checked
       ipcRenderer.send('set-yt-player-settings', { ytQuality: q, ytNoFullscreen: noFullscreen })
     }
-    // ── Draw session ──────────────────────────────────────────────
 
     let drawCurrentCode = null
     let drawPeers       = {}
