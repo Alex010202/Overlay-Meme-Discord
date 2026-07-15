@@ -126,6 +126,14 @@ function handlePeerLeave() {
 function setupIpc() {
   setOnDrawWindowClosed(handlePeerLeave)
   ipcMain.on('check-for-updates', () => checkForUpdates())
+  ipcMain.on('invite-bot', (e, clientId) => {
+    if (!clientId) {
+      console.warn('[Invite] Aucun clientId disponible, bot pas encore connecté')
+      return
+    }
+    const url = `https://discord.com/oauth2/authorize?client_id=${encodeURIComponent(clientId)}&scope=bot&permissions=66560`
+    shell.openExternal(url).catch(err => console.error('[Invite] Erreur ouverture navigateur:', err.message))
+  })
   ipcMain.on('set-channel', (e, channelId) => {
     global.settings = saveSettings({ channelId })
     startBot(channelId, getOverlayWindow(), getSettingsWindow())

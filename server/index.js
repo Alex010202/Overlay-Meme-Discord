@@ -19,7 +19,7 @@ wss.on('connection', (ws, req) => {
   ws._drawCode     = null
   ws._drawUsername = null
   if (client.isReady()) {
-    ws.send(pack('status', { ok: true, tag: client.user.tag }))
+    ws.send(pack('status', { ok: true, tag: client.user.tag, id: client.user.id }))
   } else {
     ws.send(pack('status', { ok: false, error: 'Bot pas encore prêt' }))
   }
@@ -327,7 +327,7 @@ const client = new Client({
 const CHANNEL_ID = process.env.CHANNEL_ID || ''
 client.once('clientReady', (c) => {
   console.log(`[Discord] Connecté en tant que ${c.user.tag}`)
-  broadcast('status', { ok: true, tag: c.user.tag })
+  broadcast('status', { ok: true, tag: c.user.tag, id: c.user.id })
 })
 client.on('messageCreate', (message) => {
   handleMessage(message, CHANNEL_ID).catch(err => console.error('[Discord] Erreur traitement message:', err.message))

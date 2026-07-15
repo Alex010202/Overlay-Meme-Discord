@@ -465,6 +465,12 @@
               <p class="hint">Clic droit sur le salon → Copier l'identifiant</p>
               <div class="flash" id="saved-msg">✓ Salon mis à jour</div>
             </div>
+            <div class="row-full" style="margin-top:10px;">
+              <button class="btn full" id="invite-bot-btn" onclick="inviteBot()" disabled>
+                Inviter le bot sur un serveur
+              </button>
+              <p class="hint" id="invite-bot-hint">En attente de connexion du bot…</p>
+            </div>
           </div>
         </div>
 
@@ -1357,10 +1363,26 @@
       if (s.theme) loadTheme(s.theme)
     })
 
+    let currentBotId = null
     ipcRenderer.on('status', (e, data) => {
       document.getElementById('dot').className = 'status-dot' + (data.ok ? ' on' : '')
       document.getElementById('status-text').textContent = data.ok ? data.tag : 'Erreur'
+      const inviteBtn  = document.getElementById('invite-bot-btn')
+      const inviteHint = document.getElementById('invite-bot-hint')
+      if (data.ok && data.id) {
+        currentBotId = data.id
+        if (inviteBtn)  inviteBtn.disabled = false
+        if (inviteHint) inviteHint.textContent = 'Ouvre la page Discord pour choisir le serveur à rejoindre'
+      } else {
+        if (inviteBtn)  inviteBtn.disabled = true
+        if (inviteHint) inviteHint.textContent = 'En attente de connexion du bot…'
+      }
     })
+
+    function inviteBot() {
+      if (!currentBotId) return
+      ipcRenderer.send('invite-bot', currentBotId)
+    }
 
     ipcRenderer.on('sound-toggled', (e, enabled) => {
       document.getElementById('sound-toggle').checked = enabled
