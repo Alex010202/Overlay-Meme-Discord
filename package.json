@@ -14,7 +14,7 @@
     "discord.js": "^14.0.0",
     "dotenv": "^16.0.0",
     "electron-updater": "^6.8.9",
-    "hls.js": "^1.6.16",
+    "hls.js": "^1.5.17",
     "ws": "^8.18.0"
   },
   "devDependencies": {
