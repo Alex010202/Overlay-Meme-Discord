@@ -306,6 +306,17 @@ async function handleMessage(message, currentChannelId) {
     attachmentUrl = parsed.attachmentUrl; gifIsVideo = parsed.gifIsVideo
     gifIsLooping  = parsed.gifIsLooping;  audioUrl   = parsed.audioUrl
   }
+  const earlyUrlMatch = content.match(/https?:\/\/[^\s]+/)
+  if (earlyUrlMatch && message.attachments.size === 0) {
+    const earlyUrl = earlyUrlMatch[0]
+    if (isYtDlpUrl(earlyUrl) && !isYouTubeUrl(earlyUrl) && !isTikTokUrl(earlyUrl)) {
+      const cleanContent = content.replace(earlyUrl, '').trim()
+      broadcast('message', compactMessage({ author, avatar, time, content: cleanContent, loading: true, loadingUrl: earlyUrl }))
+      broadcast('ytdlp-needed', { url: earlyUrl, type: 'ytdlp', content: cleanContent, author, avatar, time })
+      return
+    }
+  }
+
   if (message.embeds.length > 0) {
     for (const embed of message.embeds) {
       if (embed.video?.url) {
