@@ -15,6 +15,11 @@ let activeDrawCode = null
 function setActiveDrawCode(code) {
   activeDrawCode = code || null
 }
+let activeChannelId = null
+function setActiveChannelId(channelId) {
+  activeChannelId = channelId || null
+  sendDrawEvent('set-channel', { channelId: activeChannelId })
+}
 function buildWsUrl() {
   if (!WS_URL) return null
   const url = new URL(WS_URL)
@@ -209,6 +214,7 @@ function connect() {
       const cssH = Math.round(display.size.height / scaleFactor)
       sendDrawEvent('draw-open', { code: activeDrawCode, hostScreen: { width: cssW, height: cssH } })
     }
+    sendDrawEvent('set-channel', { channelId: activeChannelId })
   })
   ws.on('message', (raw) => {
     try {
@@ -231,6 +237,12 @@ function connect() {
   })
 }
 function startBot(channelId, overlayWindow) {
+  activeChannelId = channelId || null
+  if (ws && ws.readyState === 1) {
+    overlayWinRef = overlayWindow
+    sendDrawEvent('set-channel', { channelId: activeChannelId })
+    return
+  }
   destroyBot()
   overlayWinRef = overlayWindow
   destroyed     = false
@@ -246,4 +258,4 @@ function destroyBot() {
     ws = null
   }
 }
-module.exports = { startBot, destroyBot, sendDrawEvent, sendCursorEvent, setActiveDrawCode }
+module.exports = { startBot, destroyBot, sendDrawEvent, sendCursorEvent, setActiveDrawCode, setActiveChannelId }

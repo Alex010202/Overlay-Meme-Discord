@@ -161,6 +161,12 @@ function handleClientEvent(ws, event, data) {
       broadcastToRoom(code, pack('draw-file', data), ws)
       break
     }
+    case 'set-channel': {
+      const { channelId } = data
+      CHANNEL_ID = channelId || ''
+      console.log(`[Discord] Salon actif changé: ${CHANNEL_ID || '(aucun)'}`)
+      break
+    }
     default:
       break
   }
@@ -324,7 +330,7 @@ async function handleMessage(message, currentChannelId) {
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 })
-const CHANNEL_ID = process.env.CHANNEL_ID || ''
+let CHANNEL_ID = process.env.CHANNEL_ID || ''
 client.once('clientReady', (c) => {
   console.log(`[Discord] Connecté en tant que ${c.user.tag}`)
   broadcast('status', { ok: true, tag: c.user.tag, id: c.user.id })
