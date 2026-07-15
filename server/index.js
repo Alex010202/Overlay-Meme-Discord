@@ -87,11 +87,10 @@ async function checkChannelAccess(channelId) {
   if (!channelId) return { code: 'empty' }
   if (!isValidSnowflake(channelId)) return { code: 'invalid-id' }
   if (!client.isReady()) return { code: 'bot-offline' }
+  const channel = client.channels.cache.get(channelId)
+  if (!channel) return { code: 'not-in-server' }
+  if (!channel.guild) return { code: 'error' }
   try {
-    let channel = client.channels.cache.get(channelId)
-    if (!channel) channel = await client.channels.fetch(channelId)
-    if (!channel) return { code: 'not-in-server' }
-    if (!channel.guild) return { code: 'error' }
     const me = channel.guild.members.me || await channel.guild.members.fetchMe().catch(() => null)
     if (!me) return { code: 'not-in-server' }
     const perms = channel.permissionsFor(me)
@@ -100,11 +99,29 @@ async function checkChannelAccess(channelId) {
     }
     return { code: 'ok', channelName: channel.name, guildName: channel.guild.name }
   } catch (err) {
-    if (err.code === 10003) return { code: 'not-in-server' }
-    if (err.code === 50001) return { code: 'no-permission' }
     console.error('[Channel] Erreur vérification accès:', err.message)
     return { code: 'error' }
   }
+}
+let lastChannelStatusKey = null
+async function checkAndBroadcastIfChanged() {
+  if (!CHANNEL_ID) return
+  const result = await checkChannelAccess(CHANNEL_ID)
+  const key = JSON.stringify(result)
+  if (key !== lastChannelStatusKey) {
+    lastChannelStatusKey = key
+    broadcast('channel-status', result)
+  }
+}
+let recheckTimer = null
+function scheduleRecheck(delay = 800) {
+  clearTimeout(recheckTimer)
+  recheckTimer = setTimeout(checkAndBroadcastIfChanged, delay)
+}
+async function forceCheckChannel() {
+  const result = await checkChannelAccess(CHANNEL_ID)
+  lastChannelStatusKey = JSON.stringify(result)
+  broadcast('channel-status', result)
 }
 function handleClientEvent(ws, event, data) {
   switch (event) {
@@ -191,7 +208,7 @@ function handleClientEvent(ws, event, data) {
       const { channelId } = data
       CHANNEL_ID = channelId || ''
       console.log(`[Discord] Salon actif changé: ${CHANNEL_ID || '(aucun)'}`)
-      checkChannelAccess(CHANNEL_ID).then(result => ws.send(pack('channel-status', result)))
+      forceCheckChannel()
       break
     }
     default:
@@ -361,8 +378,16 @@ let CHANNEL_ID = process.env.CHANNEL_ID || ''
 client.once('clientReady', (c) => {
   console.log(`[Discord] Connecté en tant que ${c.user.tag}`)
   broadcast('status', { ok: true, tag: c.user.tag, id: c.user.id })
-  checkChannelAccess(CHANNEL_ID).then(result => broadcast('channel-status', result))
+  forceCheckChannel()
 })
+client.on('guildCreate', () => scheduleRecheck(500))
+client.on('guildDelete', () => scheduleRecheck(500))
+client.on('channelCreate', (c) => { if (c.id === CHANNEL_ID) scheduleRecheck() })
+client.on('channelDelete', (c) => { if (c.id === CHANNEL_ID) scheduleRecheck() })
+client.on('channelUpdate', (oldC, newC) => { if (newC.id === CHANNEL_ID) scheduleRecheck() })
+client.on('roleUpdate', () => scheduleRecheck(1200))
+client.on('guildMemberUpdate', (oldM, newM) => { if (newM.id === client.user?.id) scheduleRecheck() })
+setInterval(checkAndBroadcastIfChanged, 60000)
 client.on('messageCreate', (message) => {
   handleMessage(message, CHANNEL_ID).catch(err => console.error('[Discord] Erreur traitement message:', err.message))
 })
