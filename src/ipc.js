@@ -126,6 +126,7 @@ function handlePeerLeave() {
 function setupIpc() {
   setOnDrawWindowClosed(handlePeerLeave)
   ipcMain.on('check-for-updates', () => checkForUpdates())
+  ipcMain.on('debug-log', (e, ...args) => console.log('[HLS-DEBUG]', ...args))
   ipcMain.on('invite-bot', (e, clientId) => {
     if (!clientId) {
       console.warn('[Invite] Aucun clientId disponible, bot pas encore connecté')

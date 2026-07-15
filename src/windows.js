@@ -51,6 +51,7 @@ function createOverlayWindow() {
     alwaysOnTop: true,
     skipTaskbar: true,
     resizable: true,
+    focusable: false,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -59,7 +60,7 @@ function createOverlayWindow() {
     }
   })
 
-  overlayWindow.setAlwaysOnTop(true, 'screen-saver')
+  overlayWindow.setAlwaysOnTop(true, 'floating')
   overlayWindow.loadFile('overlay.html')
 
   const ses = overlayWindow.webContents.session

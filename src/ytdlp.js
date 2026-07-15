@@ -80,6 +80,15 @@ function isYouTubeUrl(url) {
   }
 }
 
+function isTwitchUrl(url) {
+  try {
+    const host = new URL(url).hostname.replace('www.', '')
+    return host === 'twitch.tv' || host.endsWith('.twitch.tv')
+  } catch {
+    return false
+  }
+}
+
 function extractYouTubeId(url) {
   try {
     const parsed = new URL(url)
@@ -131,6 +140,11 @@ function buildYtDlpArgs(url, settings) {
   }
 
   const args = ['-f', formatStr, '--get-url', '--no-playlist']
+
+  if (isTwitchUrl(url) && settings.twitchProxy) {
+    args.push('--proxy', settings.twitchProxy)
+  }
+
   if (settings.ytExtraArgs) {
     args.push(...settings.ytExtraArgs.trim().split(/\s+/).filter(Boolean))
   }
@@ -233,6 +247,7 @@ module.exports = {
   isTikTokUrl,
   isYtDlpUrl,
   isYouTubeUrl,
+  isTwitchUrl,
   extractYouTubeId,
   fetchYtDlpStream,
   fetchYtDlpTikTokFile,

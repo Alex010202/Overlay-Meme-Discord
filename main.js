@@ -49,9 +49,7 @@ app.whenReady().then(() => {
 
 app.on('web-contents-created', (e, wc) => {
   wc.on('console-message', (e, level, message, line, sourceId) => {
-    if (message.includes('[Capture]') || message.includes('[Draw]')) {
-      console.log(`[RENDERER] ${message}`)
-    }
+    console.log(`[RENDERER] ${message}`)
   })
 })
 

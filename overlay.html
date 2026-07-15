@@ -440,6 +440,8 @@
 
   <script>
   const { ipcRenderer } = require('electron')
+  const Hls = require('hls.js')
+  console.log('[HLS] TEST BOOT — si tu vois ce message le pipe fonctionne')
   const MAX = 6
 
   let soundEnabled = false
@@ -514,6 +516,8 @@
   if (div._removing) return
   div._removing = true
   if (div._audioEl) { try { div._audioEl.pause() } catch(e){} }
+  if (div._liveWatchdog) { clearInterval(div._liveWatchdog); div._liveWatchdog = null }
+  if (div._hlsInstance) { try { div._hlsInstance.destroy() } catch(e){}; div._hlsInstance = null }
   const vid = div.querySelector('video')
   if (vid) { try { vid.pause() } catch(e){} }
 
@@ -604,176 +608,285 @@
   const loadingDivs = new Map()
 
   function buildYtDlpPlayer(data, div) {
-    const { videoUrl, audioUrl, title, uploader, sourceUrl, duration } = data
+  const { videoUrl, audioUrl, title, uploader, sourceUrl, duration } = data
 
-    const player = document.createElement('div')
-    player.className = 'ytdlp-player'
+  const player = document.createElement('div')
+  player.className = 'ytdlp-player'
 
-    const videoWrap = document.createElement('div')
-    videoWrap.className = 'ytdlp-video-wrap'
+  const videoWrap = document.createElement('div')
+  videoWrap.className = 'ytdlp-video-wrap'
 
-    const vid = document.createElement('video')
+  const vid = document.createElement('video')
+  vid.autoplay = true
+  vid.muted = !soundEnabled
+  vid.volume = videoVolume
+  vid.playsInline = true
+  vid.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;visibility:hidden;'
+
+  let adRanges = []
+  let inAdBreak = false
+
+  function registerAdRangesFromManifest(manifestText) {
+    const lines = manifestText.split('\n')
+    for (const line of lines) {
+      if (line.startsWith('#EXT-X-DATERANGE') && /CLASS="[^"]*ad[^"]*"/i.test(line)) {
+        const startMatch = line.match(/START-DATE="([^"]+)"/)
+        const durMatch = line.match(/DURATION=([\d.]+)/) || line.match(/PLANNED-DURATION=([\d.]+)/)
+        if (startMatch && durMatch) {
+          const start = new Date(startMatch[1]).getTime()
+          const dur = parseFloat(durMatch[1]) * 1000
+          const end = start + dur + 500
+          const alreadyKnown = adRanges.some(([s, e]) => Math.abs(s - start) < 500 && Math.abs(e - end) < 500)
+          if (!alreadyKnown) adRanges.push([start - 500, end])
+        }
+      }
+    }
+    if (adRanges.length > 200) adRanges = adRanges.slice(-100)
+  }
+
+  function isTimestampInAd(ts) {
+    return adRanges.some(([s, e]) => ts >= s && ts < e)
+  }
+
+  function setAdBreakUi(active) {
+    if (active === inAdBreak) return
+    inAdBreak = active
+    if (active) {
+      console.log('[HLS] pub détectée dans le flux : coupure image/son')
+      vid.dataset.wasMuted = vid.muted ? '1' : '0'
+      vid.muted = true
+      vid.style.visibility = 'hidden'
+    } else {
+      console.log('[HLS] retour au contenu live')
+      vid.muted = vid.dataset.wasMuted === '1'
+      vid.style.visibility = 'visible'
+    }
+  }
+
+  class AdFilterLoader extends Hls.DefaultConfig.loader {
+    load(context, config, callbacks) {
+      if (context.type === 'level' || context.type === 'audioTrack') {
+        const originalOnSuccess = callbacks.onSuccess
+        callbacks.onSuccess = (response, stats, ctx, networkDetails) => {
+          if (typeof response.data === 'string') {
+            registerAdRangesFromManifest(response.data)
+          }
+          originalOnSuccess(response, stats, ctx, networkDetails)
+        }
+      }
+      super.load(context, config, callbacks)
+    }
+  }
+
+  let hlsInstance = null
+  if (videoUrl.includes('.m3u8') && Hls.isSupported()) {
+    console.log('[HLS] init pour', videoUrl.slice(0, 80))
+    hlsInstance = new Hls({ enableWorker: true, lowLatencyMode: true, loader: AdFilterLoader })
+    hlsInstance.loadSource(videoUrl)
+    hlsInstance.attachMedia(vid)
+    hlsInstance.on(Hls.Events.MEDIA_ATTACHED, () => console.log('[HLS] media attaché'))
+    hlsInstance.on(Hls.Events.MANIFEST_PARSED, (e, data) => console.log('[HLS] manifest parsé, niveaux:', data.levels.length))
+
+    hlsInstance.on(Hls.Events.FRAG_CHANGED, (event, data) => {
+      const pdt = data?.frag?.programDateTime
+      if (typeof pdt === 'number') {
+        setAdBreakUi(isTimestampInAd(pdt))
+      }
+    })
+
+    let hlsRecoverAttempts = 0
+    hlsInstance.on(Hls.Events.ERROR, (event, d) => {
+      console.error('[HLS] erreur:', d.type, d.details, 'fatal:', d.fatal, d.response?.code || '')
+      if (!d.fatal) return
+
+      hlsRecoverAttempts++
+      if (hlsRecoverAttempts > 8) {
+        console.error('[HLS] trop de tentatives de récupération, on recharge la source depuis zéro')
+        hlsRecoverAttempts = 0
+        try {
+          hlsInstance.destroy()
+        } catch (e) {}
+        hlsInstance = new Hls({ enableWorker: true, lowLatencyMode: true, loader: AdFilterLoader })
+        hlsInstance.loadSource(videoUrl)
+        hlsInstance.attachMedia(vid)
+        return
+      }
+
+      switch (d.type) {
+        case Hls.ErrorTypes.NETWORK_ERROR:
+          console.warn('[HLS] erreur réseau fatale, on relance le chargement')
+          hlsInstance.startLoad()
+          break
+        case Hls.ErrorTypes.MEDIA_ERROR:
+          console.warn('[HLS] erreur média fatale, on tente recoverMediaError')
+          hlsInstance.recoverMediaError()
+          break
+        default:
+          console.error('[HLS] erreur fatale non récupérable, destruction de l\'instance')
+          hlsInstance.destroy()
+          break
+      }
+    })
+  } else {
+    console.log('[HLS] pas de m3u8 détecté ou Hls non supporté, src direct')
     vid.src = videoUrl
-    vid.autoplay = true
-    vid.muted = !soundEnabled
-    vid.volume = videoVolume
-    vid.playsInline = true
-    vid.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;visibility:hidden;'
+  }
 
-    if (title) {
-      const titleEl = document.createElement('div')
-      titleEl.className = 'ytdlp-title'
-      const src = uploader ? `${uploader}` : (new URL(sourceUrl).hostname.replace('www.',''))
-      titleEl.innerHTML = `${esc(title)} <span class="ytdlp-source">${esc(src)}</span>`
-      videoWrap.appendChild(titleEl)
+  if (title) {
+    const titleEl = document.createElement('div')
+    titleEl.className = 'ytdlp-title'
+    const src = uploader ? `${uploader}` : (new URL(sourceUrl).hostname.replace('www.',''))
+    titleEl.innerHTML = `${esc(title)} <span class="ytdlp-source">${esc(src)}</span>`
+    videoWrap.appendChild(titleEl)
+  }
+
+  let audioEl = null
+  let syncInterval = null
+  let started = false
+
+  if (audioUrl && audioUrl !== videoUrl) {
+    audioEl = new Audio(audioUrl)
+    audioEl.muted = !soundEnabled
+    audioEl.volume = videoVolume
+    audioEl.preload = 'auto'
+
+    vid.autoplay = false
+    vid.preload = 'auto'
+
+    let vidReady = false, audReady = false
+
+    function startSync() {
+      clearInterval(syncInterval)
+      syncInterval = setInterval(() => {
+        if (vid.paused || audioEl.paused || !vid.duration) return
+        const drift = audioEl.currentTime - vid.currentTime
+        if (Math.abs(drift) > 1.5) {
+          audioEl.currentTime = vid.currentTime
+          audioEl.playbackRate = 1.0
+        } else if (Math.abs(drift) > 0.05) {
+          audioEl.playbackRate = drift > 0 ? 0.95 : 1.05
+        } else {
+          audioEl.playbackRate = 1.0
+        }
+      }, 500)
     }
 
-    let audioEl = null
-    let syncInterval = null
-    let started = false
-
-    if (audioUrl && audioUrl !== videoUrl) {
-      audioEl = new Audio(audioUrl)
-      audioEl.muted = !soundEnabled
-      audioEl.volume = videoVolume
-      audioEl.preload = 'auto'
-
-      vid.autoplay = false
-      vid.preload = 'auto'
-
-      let vidReady = false, audReady = false
-
-      function startSync() {
-        clearInterval(syncInterval)
-        syncInterval = setInterval(() => {
-          if (vid.paused || audioEl.paused || !vid.duration) return
-          const drift = audioEl.currentTime - vid.currentTime
-          if (Math.abs(drift) > 1.5) {
-            audioEl.currentTime = vid.currentTime
-            audioEl.playbackRate = 1.0
-          } else if (Math.abs(drift) > 0.05) {
-            audioEl.playbackRate = drift > 0 ? 0.95 : 1.05
-          } else {
-            audioEl.playbackRate = 1.0
-          }
-        }, 500)
-      }
-
-      function tryStart() {
-        if (started || !vidReady || !audReady) return
-        started = true
-        vid.currentTime = 0
-        audioEl.currentTime = 0
-        vid.play().then(() => {
-          vid.style.visibility = 'visible'
-          audioEl.play().catch(() => {})
-          startSync()
-        }).catch(() => {})
-      }
-
-      vid.addEventListener('canplaythrough', () => { vidReady = true; tryStart() }, { once: true })
-      audioEl.addEventListener('canplaythrough', () => { audReady = true; tryStart() }, { once: true })
-
-      setTimeout(() => {
-        if (!started) { vidReady = true; audReady = true; tryStart() }
-      }, 5000)
-
-      vid.addEventListener('pause', () => {
-        audioEl.pause()
-        clearInterval(syncInterval)
-      })
-
-      vid.addEventListener('play', () => {
-        if (!started) return
-        audioEl.currentTime = vid.currentTime
+    function tryStart() {
+      if (started || !vidReady || !audReady) return
+      started = true
+      vid.currentTime = 0
+      audioEl.currentTime = 0
+      vid.play().then(() => {
+        vid.style.visibility = 'visible'
         audioEl.play().catch(() => {})
         startSync()
-      })
-
-      vid.addEventListener('seeked', () => {
-        audioEl.currentTime = vid.currentTime
-        if (!vid.paused) audioEl.play().catch(() => {})
-      })
-
-      vid.addEventListener('ended', () => {
-        audioEl.pause()
-        clearInterval(syncInterval)
-      })
+      }).catch(() => {})
     }
 
-    if (!audioUrl || audioUrl === videoUrl) {
-      vid.style.visibility = 'hidden'
-      const showVid = () => { vid.style.visibility = 'visible' }
-      vid.addEventListener('canplay', showVid, { once: true })
-      vid.addEventListener('playing', showVid, { once: true })
-      setTimeout(() => { vid.style.visibility = 'visible' }, 2000)
-    }
+    vid.addEventListener('canplaythrough', () => { vidReady = true; tryStart() }, { once: true })
+    audioEl.addEventListener('canplaythrough', () => { audReady = true; tryStart() }, { once: true })
 
-    videoWrap.appendChild(vid)
+    setTimeout(() => {
+      if (!started) { vidReady = true; audReady = true; tryStart() }
+    }, 5000)
 
-    const controls = document.createElement('div')
-    controls.className = 'ytdlp-controls'
-
-    const playBtn = document.createElement('button')
-    playBtn.className = 'ytdlp-play-btn'
-    playBtn.textContent = '⏸'
-
-    const progressWrap = document.createElement('div')
-    progressWrap.className = 'ytdlp-progress-wrap'
-
-    const progress = document.createElement('input')
-    progress.type = 'range'
-    progress.className = 'ytdlp-progress'
-    progress.min = 0; progress.max = 100; progress.step = 0.1; progress.value = 0
-
-    const timeEl = document.createElement('span')
-    timeEl.className = 'ytdlp-time'
-    timeEl.textContent = '0:00'
-
-    progressWrap.appendChild(progress)
-    controls.appendChild(playBtn)
-    controls.appendChild(progressWrap)
-    controls.appendChild(timeEl)
-
-    const clickZone = document.createElement('div')
-    clickZone.className = 'media-click-zone'
-    clickZone.innerHTML = '<span class="pause-icon">⏸</span>'
-    clickZone.addEventListener('click', () => {
-      if (vid.paused) { vid.play(); playBtn.textContent = '⏸'; clickZone.classList.remove('paused'); clickZone.querySelector('.pause-icon').textContent = '⏸' }
-      else { vid.pause(); playBtn.textContent = '▶'; clickZone.classList.add('paused'); clickZone.querySelector('.pause-icon').textContent = '▶' }
-    })
-    videoWrap.appendChild(clickZone)
-
-    playBtn.addEventListener('click', () => {
-      if (vid.paused) { vid.play(); playBtn.textContent = '⏸'; clickZone.classList.remove('paused') }
-      else { vid.pause(); playBtn.textContent = '▶'; clickZone.classList.add('paused') }
+    vid.addEventListener('pause', () => {
+      audioEl.pause()
+      clearInterval(syncInterval)
     })
 
-    vid.addEventListener('timeupdate', () => {
-      if (!vid.duration) return
-      progress.value = (vid.currentTime / vid.duration) * 100
-      timeEl.textContent = `${formatTime(vid.currentTime)} / ${formatTime(vid.duration)}`
+    vid.addEventListener('play', () => {
+      if (!started) return
+      audioEl.currentTime = vid.currentTime
+      audioEl.play().catch(() => {})
+      startSync()
     })
 
-    progress.addEventListener('input', () => {
-      if (vid.duration) {
-        vid.currentTime = (progress.value / 100) * vid.duration
-        if (audioEl) audioEl.currentTime = vid.currentTime
-      }
+    vid.addEventListener('seeked', () => {
+      audioEl.currentTime = vid.currentTime
+      if (!vid.paused) audioEl.play().catch(() => {})
     })
 
     vid.addEventListener('ended', () => {
-      playBtn.textContent = '▶'
-      if (videoUntilEnd) removeMsg(div)
+      audioEl.pause()
+      clearInterval(syncInterval)
     })
-
-    player.appendChild(videoWrap)
-    player.appendChild(controls)
-
-    div._audioEl = audioEl
-
-    return { player, vid }
   }
+
+  if (!audioUrl || audioUrl === videoUrl) {
+    vid.style.visibility = 'hidden'
+    const showVid = () => { vid.style.visibility = 'visible' }
+    vid.addEventListener('canplay', showVid, { once: true })
+    vid.addEventListener('playing', showVid, { once: true })
+    setTimeout(() => { vid.style.visibility = 'visible' }, 2000)
+  }
+
+  videoWrap.appendChild(vid)
+
+  const controls = document.createElement('div')
+  controls.className = 'ytdlp-controls'
+
+  const playBtn = document.createElement('button')
+  playBtn.className = 'ytdlp-play-btn'
+  playBtn.textContent = '⏸'
+
+  const progressWrap = document.createElement('div')
+  progressWrap.className = 'ytdlp-progress-wrap'
+
+  const progress = document.createElement('input')
+  progress.type = 'range'
+  progress.className = 'ytdlp-progress'
+  progress.min = 0; progress.max = 100; progress.step = 0.1; progress.value = 0
+
+  const timeEl = document.createElement('span')
+  timeEl.className = 'ytdlp-time'
+  timeEl.textContent = '0:00'
+
+  progressWrap.appendChild(progress)
+  controls.appendChild(playBtn)
+  controls.appendChild(progressWrap)
+  controls.appendChild(timeEl)
+
+  const clickZone = document.createElement('div')
+  clickZone.className = 'media-click-zone'
+  clickZone.innerHTML = '<span class="pause-icon">⏸</span>'
+  clickZone.addEventListener('click', () => {
+    if (vid.paused) { vid.play(); playBtn.textContent = '⏸'; clickZone.classList.remove('paused'); clickZone.querySelector('.pause-icon').textContent = '⏸' }
+    else { vid.pause(); playBtn.textContent = '▶'; clickZone.classList.add('paused'); clickZone.querySelector('.pause-icon').textContent = '▶' }
+  })
+  videoWrap.appendChild(clickZone)
+
+  playBtn.addEventListener('click', () => {
+    if (vid.paused) { vid.play(); playBtn.textContent = '⏸'; clickZone.classList.remove('paused') }
+    else { vid.pause(); playBtn.textContent = '▶'; clickZone.classList.add('paused') }
+  })
+
+  vid.addEventListener('timeupdate', () => {
+    if (!vid.duration) return
+    progress.value = (vid.currentTime / vid.duration) * 100
+    timeEl.textContent = `${formatTime(vid.currentTime)} / ${formatTime(vid.duration)}`
+  })
+
+  progress.addEventListener('input', () => {
+    if (vid.duration) {
+      vid.currentTime = (progress.value / 100) * vid.duration
+      if (audioEl) audioEl.currentTime = vid.currentTime
+    }
+  })
+
+  vid.addEventListener('ended', () => {
+    playBtn.textContent = '▶'
+    if (videoUntilEnd) removeMsg(div)
+  })
+
+  player.appendChild(videoWrap)
+  player.appendChild(controls)
+
+  div._audioEl = audioEl
+  div._hlsInstance = hlsInstance
+
+  return { player, vid }
+}
 
   ipcRenderer.on('ytdlp-resolved', (e, data) => {
     const div = loadingDivs.get(data.loadingUrl)
@@ -813,9 +926,38 @@
         vid.addEventListener('loadedmetadata', onMeta, { once: true })
     }
 
-    const dur = data.duration ? data.duration * 1000 : durationVideo
-    if (!videoUntilEnd) {
-      setTimeout(() => removeMsg(div), dur)
+    const isLive = !data.duration || data.duration <= 0
+
+    if (isLive) {
+      const CHECK_EVERY   = 5000
+      const STALL_LIMIT   = 6
+
+      let lastTime = -1
+      let stallTicks = 0
+
+      const watchdog = setInterval(() => {
+        if (div._removing) { clearInterval(watchdog); return }
+
+        if (vid.paused && !vid.ended) {
+          vid.play().catch(() => {})
+        }
+
+        const t = vid.currentTime
+        if (t === lastTime) {
+          stallTicks++
+          if (stallTicks >= STALL_LIMIT) {
+            clearInterval(watchdog)
+            removeMsg(div)
+          }
+        } else {
+          stallTicks = 0
+          lastTime = t
+        }
+      }, CHECK_EVERY)
+
+      div._liveWatchdog = watchdog
+    } else if (!videoUntilEnd) {
+      setTimeout(() => removeMsg(div), data.duration * 1000)
     }
   })
 
