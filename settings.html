@@ -180,6 +180,48 @@
     .btn.danger { background: var(--red); }
     .btn.warning { background: var(--orange); }
     .btn.full { width: 100%; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+
+    .input-icon-wrap { position: relative; flex: 1; display: flex; align-items: center; }
+    .input-icon { position: absolute; left: 11px; font-size: 14px; color: var(--text-muted); pointer-events: none; }
+    .input-icon-wrap input[type="text"] { padding-left: 31px; width: 100%; }
+
+    .bot-identity {
+      display: flex; align-items: center; gap: 9px;
+      padding: 11px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--raised);
+    }
+    .bot-avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--accent-dim); color: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; flex-shrink: 0; transition: background 0.2s, color 0.2s;
+    }
+    .bot-avatar.stat-green  { background: color-mix(in srgb, var(--green) 18%, transparent); color: var(--green); }
+    .bot-avatar.stat-orange { background: color-mix(in srgb, var(--orange) 18%, transparent); color: var(--orange); }
+    .bot-avatar.stat-red    { background: color-mix(in srgb, var(--red) 18%, transparent); color: var(--red); }
+    .bot-avatar.stat-muted  { background: var(--border); color: var(--text-muted); }
+    .bot-identity-text { min-width: 0; flex: 1; }
+    .bot-identity-name { font-size: 12.5px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 0.2s; }
+    .bot-identity-name.stat-green  { color: var(--green); }
+    .bot-identity-name.stat-orange { color: var(--orange); }
+    .bot-identity-name.stat-red    { color: var(--red); }
+    .bot-identity-sub { font-size: 10.5px; color: var(--text-muted); margin-top: 1px; }
+    #bot-avatar-icon.ti-loader-2 { animation: spin-loader 0.8s linear infinite; display: inline-block; }
+    @keyframes spin-loader { to { transform: rotate(360deg); } }
+
+    .invite-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; padding: 12px 16px;
+      background: var(--accent-dim);
+    }
+    .invite-row-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .invite-row-left i { font-size: 18px; color: var(--accent); flex-shrink: 0; }
+    .invite-row-label { font-size: 12.5px; font-weight: 600; color: var(--text); }
+    .invite-row-sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+    .btn.discord { background: var(--accent); flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; }
+    .btn.discord i { font-size: 13px; }
 
     .hotkey-box {
       display: flex; align-items: center; justify-content: space-between;
@@ -455,21 +497,39 @@
       <!-- GÉNÉRAL -->
       <div class="tab active" id="tab-general">
         <div class="card">
-          <div class="card-header">Salon Discord</div>
+          <div class="card-header">Bot Discord</div>
           <div class="card-body">
+            <div class="bot-identity">
+              <div class="bot-avatar stat-muted" id="bot-avatar">
+                <i class="ti ti-hash" id="bot-avatar-icon"></i>
+              </div>
+              <div class="bot-identity-text">
+                <div class="bot-identity-name" id="bot-identity-name">Aucun salon configuré</div>
+                <div class="bot-identity-sub" id="bot-identity-sub">Renseigne un ID de salon ci-dessous</div>
+              </div>
+            </div>
             <div class="row-full">
               <div class="field-group">
-                <input type="text" id="channel-id" placeholder="ID du salon (ex: 123456789…)">
+                <div class="input-icon-wrap">
+                  <i class="ti ti-hash input-icon"></i>
+                  <input type="text" id="channel-id" placeholder="ID du salon (ex: 123456789…)">
+                </div>
                 <button class="btn" onclick="applyChannel()">Appliquer</button>
               </div>
               <p class="hint">Clic droit sur le salon → Copier l'identifiant</p>
               <div class="flash" id="saved-msg">✓ Salon mis à jour</div>
             </div>
-            <div class="row-full" style="margin-top:10px;">
-              <button class="btn full" id="invite-bot-btn" onclick="inviteBot()" disabled>
-                Inviter le bot sur un serveur
+            <div class="invite-row">
+              <div class="invite-row-left">
+                <i class="ti ti-brand-discord"></i>
+                <div>
+                  <div class="invite-row-label">Ajouter le bot à un serveur</div>
+                  <div class="invite-row-sub" id="invite-bot-hint">En attente de connexion du bot…</div>
+                </div>
+              </div>
+              <button class="btn discord sm" id="invite-bot-btn" onclick="inviteBot()" disabled>
+                <i class="ti ti-external-link"></i>Inviter
               </button>
-              <p class="hint" id="invite-bot-hint">En attente de connexion du bot…</p>
             </div>
           </div>
         </div>
@@ -1291,7 +1351,7 @@
     }
 
     ipcRenderer.on('load-settings', (e, s) => {
-      if (s.channelId) document.getElementById('channel-id').value = s.channelId
+      if (s.channelId) { document.getElementById('channel-id').value = s.channelId; setChannelStatus('checking') }
       if (s.opacity !== undefined) {
         document.getElementById('opacity').value = s.opacity
         document.getElementById('opacity-val').textContent = Math.round(s.opacity * 100) + '%'
@@ -1367,14 +1427,16 @@
     ipcRenderer.on('status', (e, data) => {
       document.getElementById('dot').className = 'status-dot' + (data.ok ? ' on' : '')
       document.getElementById('status-text').textContent = data.ok ? data.tag : 'Erreur'
+
       const inviteBtn  = document.getElementById('invite-bot-btn')
       const inviteHint = document.getElementById('invite-bot-hint')
       if (data.ok && data.id) {
         currentBotId = data.id
-        if (inviteBtn)  inviteBtn.disabled = false
-        if (inviteHint) inviteHint.textContent = 'Ouvre la page Discord pour choisir le serveur à rejoindre'
+        if (inviteBtn)  inviteBtn.disabled  = false
+        if (inviteHint) inviteHint.textContent = 'Choisis le serveur depuis la page Discord'
       } else {
-        if (inviteBtn)  inviteBtn.disabled = true
+        currentBotId = null
+        if (inviteBtn)  inviteBtn.disabled  = true
         if (inviteHint) inviteHint.textContent = 'En attente de connexion du bot…'
       }
     })
@@ -1383,6 +1445,32 @@
       if (!currentBotId) return
       ipcRenderer.send('invite-bot', currentBotId)
     }
+
+    const CHANNEL_STATUS_MAP = {
+      'checking':      { icon: 'ti-loader-2',        stat: 'muted',  title: 'Vérification…',                    sub: 'Un instant' },
+      'empty':         { icon: 'ti-hash',             stat: 'muted',  title: 'Aucun salon configuré',            sub: 'Renseigne un ID de salon ci-dessous' },
+      'invalid-id':    { icon: 'ti-alert-triangle',   stat: 'orange', title: 'ID invalide',                      sub: 'Vérifie le format de l\'identifiant (17-20 chiffres)' },
+      'bot-offline':   { icon: 'ti-plug-off',         stat: 'red',    title: 'Bot hors ligne',                   sub: 'Le bot doit être connecté pour vérifier le salon' },
+      'not-in-server': { icon: 'ti-user-x',           stat: 'red',    title: 'Bot pas présent sur ce serveur',   sub: 'Invitation requise — utilise le bouton ci-dessous' },
+      'no-permission': { icon: 'ti-lock',             stat: 'orange', title: 'Permission requise',               sub: 'Autorise "Voir le salon" pour le rôle du bot' },
+      'error':         { icon: 'ti-alert-circle',     stat: 'red',    title: 'Erreur de vérification',           sub: 'Réessaie, ou vérifie les logs du serveur' },
+      'ok':            { icon: 'ti-check',            stat: 'green',  title: 'Salon accessible',                 sub: '' }
+    }
+    function setChannelStatus(code, extra) {
+      const cfg = CHANNEL_STATUS_MAP[code] || CHANNEL_STATUS_MAP['error']
+      const avatar   = document.getElementById('bot-avatar')
+      const icon     = document.getElementById('bot-avatar-icon')
+      const nameEl   = document.getElementById('bot-identity-name')
+      const subEl    = document.getElementById('bot-identity-sub')
+      avatar.className = 'bot-avatar stat-' + cfg.stat
+      icon.className   = 'ti ' + cfg.icon
+      nameEl.className = 'bot-identity-name stat-' + cfg.stat
+      nameEl.textContent = cfg.title
+      subEl.textContent  = (code === 'ok' && extra?.channelName)
+        ? `#${extra.channelName} — ${extra.guildName || 'serveur inconnu'}`
+        : cfg.sub
+    }
+    ipcRenderer.on('channel-status', (e, data) => setChannelStatus(data.code, data))
 
     ipcRenderer.on('sound-toggled', (e, enabled) => {
       document.getElementById('sound-toggle').checked = enabled
@@ -1426,6 +1514,7 @@
     function applyChannel() {
       const id = document.getElementById('channel-id').value.trim()
       if (!id) return
+      setChannelStatus('checking')
       ipcRenderer.send('set-channel', id)
       flashSaved('saved-msg')
     }

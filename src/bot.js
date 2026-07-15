@@ -39,6 +39,11 @@ async function onServerEvent(event, data) {
     overlay.webContents.send('message', data)
     return
   }
+  if (event === 'channel-status') {
+    const { getSettingsWindow } = require('./windows')
+    getSettingsWindow()?.webContents.send('channel-status', data)
+    return
+  }
   if (event === 'draw-joined') {
     console.log('[Draw] draw-joined reçu du serveur:', data)
     const { getSettingsWindow, getDrawOverlayWindow, showDrawOverlay } = require('./windows')

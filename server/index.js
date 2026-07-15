@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits } = require('discord.js')
+const { Client, GatewayIntentBits, PermissionsBitField } = require('discord.js')
 const { WebSocketServer } = require('ws')
 const https = require('https')
 const PORT      = process.env.PORT      || 3000
@@ -78,6 +78,32 @@ function broadcastToRoom(code, str, exclude = null) {
         if (err) console.error('[WS] Erreur envoi room:', err.message)
       })
     }
+  }
+}
+function isValidSnowflake(id) {
+  return /^\d{17,20}$/.test(id || '')
+}
+async function checkChannelAccess(channelId) {
+  if (!channelId) return { code: 'empty' }
+  if (!isValidSnowflake(channelId)) return { code: 'invalid-id' }
+  if (!client.isReady()) return { code: 'bot-offline' }
+  try {
+    let channel = client.channels.cache.get(channelId)
+    if (!channel) channel = await client.channels.fetch(channelId)
+    if (!channel) return { code: 'not-in-server' }
+    if (!channel.guild) return { code: 'error' }
+    const me = channel.guild.members.me || await channel.guild.members.fetchMe().catch(() => null)
+    if (!me) return { code: 'not-in-server' }
+    const perms = channel.permissionsFor(me)
+    if (!perms || !perms.has(PermissionsBitField.Flags.ViewChannel) || !perms.has(PermissionsBitField.Flags.ReadMessageHistory)) {
+      return { code: 'no-permission', channelName: channel.name, guildName: channel.guild.name }
+    }
+    return { code: 'ok', channelName: channel.name, guildName: channel.guild.name }
+  } catch (err) {
+    if (err.code === 10003) return { code: 'not-in-server' }
+    if (err.code === 50001) return { code: 'no-permission' }
+    console.error('[Channel] Erreur vérification accès:', err.message)
+    return { code: 'error' }
   }
 }
 function handleClientEvent(ws, event, data) {
@@ -165,6 +191,7 @@ function handleClientEvent(ws, event, data) {
       const { channelId } = data
       CHANNEL_ID = channelId || ''
       console.log(`[Discord] Salon actif changé: ${CHANNEL_ID || '(aucun)'}`)
+      checkChannelAccess(CHANNEL_ID).then(result => ws.send(pack('channel-status', result)))
       break
     }
     default:
@@ -334,6 +361,7 @@ let CHANNEL_ID = process.env.CHANNEL_ID || ''
 client.once('clientReady', (c) => {
   console.log(`[Discord] Connecté en tant que ${c.user.tag}`)
   broadcast('status', { ok: true, tag: c.user.tag, id: c.user.id })
+  checkChannelAccess(CHANNEL_ID).then(result => broadcast('channel-status', result))
 })
 client.on('messageCreate', (message) => {
   handleMessage(message, CHANNEL_ID).catch(err => console.error('[Discord] Erreur traitement message:', err.message))
