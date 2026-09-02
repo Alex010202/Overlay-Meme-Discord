@@ -284,10 +284,23 @@ function parseAttachments(message) {
   }
   return { attachmentUrl, gifIsVideo, gifIsLooping, audioUrl }
 }
+function isSafeMediaUrl(u) {
+  if (typeof u !== 'string' || !u) return false
+  if (/["'<>]/.test(u)) return false
+  try {
+    const p = new URL(u)
+    return p.protocol === 'https:' || p.protocol === 'http:'
+  } catch {
+    return false
+  }
+}
+const URL_FIELDS = new Set(['gifUrl', 'avatar', 'audioUrl', 'loadingUrl'])
 function compactMessage(obj) {
   const out = {}
   for (const [k, v] of Object.entries(obj)) {
-    if (v !== null && v !== false && v !== '') out[k] = v
+    if (v === null || v === false || v === '') continue
+    if (URL_FIELDS.has(k) && !isSafeMediaUrl(v)) continue
+    out[k] = v
   }
   return out
 }

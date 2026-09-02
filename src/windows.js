@@ -53,10 +53,10 @@ function createOverlayWindow() {
     resizable: true,
     focusable: false,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
-      webSecurity: false,
-      allowRunningInsecureContent: true
+      nodeIntegration: false,
+      contextIsolation: true,
+      webSecurity: true,
+      preload: path.join(__dirname, '..', 'preload-overlay.js')
     }
   })
 
@@ -106,9 +106,10 @@ function createDrawOverlayWindow(hostWidth, hostHeight) {
     movable: true,
     focusable: true,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
-      webSecurity: false
+      nodeIntegration: false,
+      contextIsolation: true,
+      webSecurity: true,
+      preload: path.join(__dirname, '..', 'preload-draw.js')
     }
   })
 
@@ -164,10 +165,10 @@ function createHostDrawOverlay() {
     focusable: false,
     hasShadow: false,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
-      webSecurity: false,
-      enableRemoteModule: true
+      nodeIntegration: false,
+      contextIsolation: true,
+      webSecurity: true,
+      preload: path.join(__dirname, '..', 'preload-host-draw.js')
     }
   })
 
@@ -220,8 +221,10 @@ function createSettingsWindow() {
     frame: false,
     title: 'Discord Overlay - Settings',
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false
+      nodeIntegration: false,
+      contextIsolation: true,
+      webSecurity: true,
+      preload: path.join(__dirname, '..', 'preload-settings.js')
     }
   })
 

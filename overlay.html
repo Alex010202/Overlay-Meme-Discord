@@ -438,9 +438,9 @@
   </div>
   <div id="messages"></div>
 
+  <script src="./node_modules/hls.js/dist/hls.min.js"></script>
   <script>
-  const { ipcRenderer } = require('electron')
-  const Hls = require('hls.js')
+  const ipcRenderer = window.ipc
   console.log('[HLS] TEST BOOT — si tu vois ce message le pipe fonctionne')
   const MAX = 6
 
@@ -457,6 +457,15 @@
   function esc(t) {
     return String(t)
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;')
+  }
+
+  function safeUrl(u) {
+    try {
+      const p = new URL(String(u))
+      if (p.protocol !== 'http:' && p.protocol !== 'https:' && p.protocol !== 'file:') return ''
+      return esc(u)
+    } catch { return '' }
   }
 
   function formatTime(s) {
@@ -1043,7 +1052,7 @@
       div.className = 'msg media-msg'
       div.innerHTML = `
         <div class="msg-top" style="position:relative;z-index:2;">
-          <img class="avatar" src="${msg.avatar}" onerror="this.style.display='none'">
+          <img class="avatar" src="${safeUrl(msg.avatar)}" onerror="this.style.display='none'">
           <span class="author">${esc(msg.author)}</span>
           <span class="time">${msg.time}</span>
         </div>
@@ -1110,21 +1119,21 @@
           ? `onended="(function(v){const m=v.closest('.msg');if(m)removeMsg(m)})(this)"`
           : ''
         mediaHtml = `<video
-          src="${msg.gifUrl}"
+          src="${safeUrl(msg.gifUrl)}"
           autoplay ${loopAttr} playsinline
           style="width:100%;height:100%;border-radius:0;margin-top:0;display:block;object-fit:contain;"
           onloadedmetadata="this.muted=${!soundEnabled};this.volume=${videoVolume};"
           ${endedCb}
         ></video>`
       } else {
-        mediaHtml = `<img src="${msg.gifUrl}"
+        mediaHtml = `<img src="${safeUrl(msg.gifUrl)}"
           style="width:100%;height:100%;border-radius:0;margin-top:0;display:block;object-fit:contain;">`
       }
     }
 
     div.innerHTML = `
       <div class="msg-top">
-        <img class="avatar" src="${msg.avatar}" onerror="this.style.display='none'">
+        <img class="avatar" src="${safeUrl(msg.avatar)}" onerror="this.style.display='none'">
         <span class="author">${esc(msg.author)}</span>
         <span class="time">${msg.time}</span>
       </div>

@@ -1302,7 +1302,13 @@
   </div>
 
   <script>
-    const { ipcRenderer } = require('electron')
+    const ipcRenderer = window.ipc
+
+    function esc(t) {
+      return String(t)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#39;')
+    }
 
     function minimizeWindow() { ipcRenderer.send('win-minimize') }
     function closeWindow()    { ipcRenderer.send('win-close') }
@@ -1487,7 +1493,7 @@
         const safe = name.replace(/\\/g,'\\\\').replace(/'/g,"\\'")
         return `<div class="profile-item">
           <div class="row-left">
-            <div class="profile-name">${name}</div>
+            <div class="profile-name">${esc(name)}</div>
             <div class="profile-meta">${b.width}×${b.height} · ${Math.round(p.opacity*100)}% opacité · ${p.fontSize}px</div>
           </div>
           <button class="btn sm ghost" onclick="loadProfile('${safe}')">Charger</button>
@@ -1818,7 +1824,7 @@
 
     function copyDrawCode() {
       if (!drawCurrentCode) return
-      require('electron').clipboard.writeText(drawCurrentCode)
+      window.clipboardAPI.writeText(drawCurrentCode)
       const flash = document.getElementById('draw-copy-flash')
       flash.classList.add('show')
       setTimeout(() => flash.classList.remove('show'), 2000)
@@ -1854,10 +1860,10 @@
         return
       }
       list.innerHTML = peers.map(p => {
-        const initial = (p.username || '?').charAt(0).toUpperCase()
+        const initial = esc((p.username || '?').charAt(0).toUpperCase())
         return `<div class="peer-item">
           <div class="peer-avatar">${initial}</div>
-          <span style="font-size:13px;">${p.username || 'Anonyme'}</span>
+          <span style="font-size:13px;">${esc(p.username || 'Anonyme')}</span>
           <span class="peer-live-dot"></span>
         </div>`
       }).join('')

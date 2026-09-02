@@ -652,7 +652,12 @@ body.gif-mode #mode-switch { opacity:1!important; pointer-events:auto!important;
   <span id="info-hist"></span>
 </div>
 
-<script>const { ipcRenderer } = require('electron')
+<script>const ipcRenderer = window.ipc
+function esc(t) {
+  return String(t)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;')
+}
 const canvas    = document.getElementById('canvas')
 const ctx       = canvas.getContext('2d')
 const canvasBg  = document.getElementById('canvas-bg')
@@ -1169,7 +1174,7 @@ function getOrCreateCursor(id,name) {
   const color=CC[ccIdx++%CC.length]
   const el=document.createElement('div'); el.className='remote-cursor'
   el.innerHTML=`<div class="remote-cursor-dot" style="background:${color}"></div>
-    <div class="remote-cursor-label" style="background:${color}">${name||'Pote'}</div>`
+    <div class="remote-cursor-label" style="background:${color}">${esc(name||'Pote')}</div>`
   document.body.appendChild(el); remoteCursors[id]={el,color}; return el
 }
 function updateRemoteCursor(id,name,nx,ny) {
@@ -1440,7 +1445,7 @@ function renderGifGrid(items, append = false) {
     const el = document.createElement('div')
     el.className = 'gif-item'
     el.innerHTML = `<div class="gif-placeholder" style="width:100%;height:100%;min-height:80px;background:var(--surface2);border-radius:8px;"></div>
-      <div class="gif-item-label">${item.title}</div>`
+      <div class="gif-item-label">${esc(item.title)}</div>`
     el.addEventListener('click', () => sendGifFromUrl(item.url, item.title))
     grid.appendChild(el)
     const img = document.createElement('img')

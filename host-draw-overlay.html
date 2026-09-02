@@ -19,7 +19,7 @@
 <canvas id="canvas"></canvas>
 <div id="file-layer" style="position:fixed;inset:0;pointer-events:none;z-index:5;"></div>
 <script>
-const { ipcRenderer } = require('electron')
+const ipcRenderer = window.ipc
 
 const canvas = document.getElementById('canvas')
 const ctx    = canvas.getContext('2d')
